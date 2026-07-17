@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+
+    <title>Пустой проект</title>
+    <link rel="stylesheet" href="./src/styles.css">
+
+    <!-- Загрузить шрифты из Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Noto+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="g-divContainer" class="g-flex g-center">
+        <div id="g-divGame" class="hide">
+            <div id="g-divCanvasPositioning" class="g-flex g-center g-extend">
+                <div id="g-divCanvas">
+                    <!-- (EDITABLE) -->
+                    <div id="g-divCanvasElements" class="hide transparent">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="g-fullscreenOverlay" class="hide g-extend g-flex g-center">
+            <div class="g-flex g-column g-center">
+                <img src="icons/rotate_device.svg" alt="Поверните устройство" aria-hidden="true">
+                <p></p>
+            </div>
+        </div>
+
+        <div id="g-mainPanel" class="g-panel">
+            <button id="g-bFullscreen" class="hide2">
+                <img src="./icons/fullscreen_enter.svg" alt="На весь экран" class="">
+                <img src="./icons/fullscreen_exit.svg" alt="На весь экран" class="hide">
+                <img src="./icons/close.svg" alt="Закрыть" class="hide">
+            </button>
+            <button id="g-bInfo"><img src="./icons/info.svg" alt="i"></button>
+        </div>
+
+        <div id="g-divProgressBar" class="g-flex g-column g-center">
+            <p id="g-progressBarText" class="g-unselectable"><noscript>Включите JavaScript</noscript></p>
+            <p id="g-progressBarError" class="hide"></p>
+            <div id="g-progressBar">
+                <div id="g-progressBarValue"></div>
+            </div>
+        </div>
+
+        <div id="g-modal" class="hide"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="g-mwName"
+            aria-describedby="g-modalDivContent"
+        >
+            <div id="g-modalBackground"></div>
+            <div id="g-modalFlexP" class="g-flex g-center g-extend  js-closeModal">
+                <div id="g-modalWindow" class="g-flex g-column">
+
+                    <div id="g-modalInnerContent" class="mp f-extend">
+                        <h1 id="g-mwName">Пустой проект</h1>
+                        <div id="g-modalDivContent">
+                            <p class="m bottom-4"></p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <hr class="horizontal-line">
+                        <menu class="info g-flex g-center">
+                            <li><a id="g-mwAQuit" href="/">Выйти из проекта</a></li>
+                            <li><button id="g-mwAClose">Закрыть</button></li>
+                        </menu>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        window.loadingError = false;
+        if (!(window.location.protocol === "file:" || window.location.origin == "null")) {
+            
+            document.querySelector("#g-modalDivContent > p").textContent = "Загрузка информации...";
+            document.getElementById("g-progressBarText").textContent = "Загрузка... 0%";
+
+            window.loadingEventListeners = {
+                displayError: function(reason) {
+                    if (window.loadingError) return;
+                    window.loadingError = true;
+                    console.error(reason);
+                    
+                    document.getElementById("g-divProgressBar").classList.remove("hide");
+                    const elProgressBarError = document.getElementById("g-progressBarError");
+                    elProgressBarError.classList.remove("hide");
+                    document.getElementById("g-progressBarText").textContent = "Ошибка загрузки";
+                    elProgressBarError.textContent = reason;
+                },
+
+                unableToLoadModule1: function(event) {
+                    if (event.target && event.target.tagName === 'SCRIPT') {
+                        window.loadingEventListeners.displayError("Не удалось загрузить модуль: "+String(event.target.src));
+                    }
+                },
+                unableToLoadModule2: function(_, source) {
+                    if (source && (source.includes('assets/') || source.includes('index-'))) {
+                        window.loadingEventListeners.displayError("Не удалось загрузить модуль: "+String(source));
+                        return true;
+                    }
+                },
+                promptToReloadPage: function(event){
+                    if (event.reason && String(event.reason).includes("dynamically imported module")) {
+                        window.loadingEventListeners.displayError("Перезагрузите страницу.");
+
+                        // Перезагрузка в обход кэша GitHub Pages
+                        const elButton = document.createElement("button");
+                        elButton.classList.add("reloadButton");
+                        elButton.textContent = "Перезагрузить";
+                        elButton.onclick = function(){
+
+                            if ("serviceWorker" in navigator) {
+                                navigator.serviceWorker.getRegistrations().then(registrations => {
+                                    for (let registration of registrations) registration.unregister();
+                                });
+                            }
+                            window.location.reload(true);
+                        };
+
+                        document.getElementById("g-progressBar").classList.add("hide");
+                        document.getElementById("g-divProgressBar").appendChild(elButton);
+                    }
+                }
+            };
+            // Самоуничтожается, когда проект полностью загружен
+            window.removeLoadingEventListeners = function() {
+                window.removeEventListener("error", window.loadingEventListeners.unableToLoadModule1, true);
+                window.onerror = null;
+                
+                window.removeEventListener("unhandledrejection", window.loadingEventListeners.promptToReloadPage);
+                window.loadingEventListeners = null;
+            };
+
+            // Если не удалось загрузить модуль
+            window.addEventListener("error", window.loadingEventListeners.unableToLoadModule1, true);
+            window.onerror = window.loadingEventListeners.unableToLoadModule2;   
+            window.addEventListener("unhandledrejection", window.loadingEventListeners.promptToReloadPage);
+
+            // Проверка браузера на стандарт es2020 и необходимые API
+            (function() {
+                const remarks = [];
+
+                try {
+                    // Optional chaining and nullish coalescing
+                    new Function("(({})?.prop ?? true);");
+
+                    const hasModules = ("noModule" in document.createElement("script"));
+                    const hasBigInt = typeof(BigInt) === "function" && typeof(BigInt(1)) === "bigint";
+                    const hasAllSettled = typeof(Promise.allSettled) === "function";
+
+                    if (!(hasBigInt && hasAllSettled && hasModules)) {
+                        remarks.push("Ваш браузер устарел.");
+                    }
+                }
+                catch {
+                    remarks.push("Ваш браузер устарел.");
+                }
+
+                // Pointer Events
+                if (!("PointerEvent" in window)) {
+                    remarks.push("Нет поддержки Pointer Events.");
+                }
+
+                if (remarks.length!==0) {
+                    const remark = remarks.join("\n");
+                    window.loadingEventListeners.displayError(remark + "\nДля корректной работы обновите браузер.");
+                }
+            })();
+        }
+        else {
+            window.alert("Нельзя запустить проект в скачанной странице");
+        }
+    </script>
+    
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
