@@ -6,7 +6,6 @@ export let error = false;
 //! DEFINITION OF DATA TYPES AND INTERFACES
 
 type Ctx2D = CanvasRenderingContext2D;
-type SpriteOrArray = Sprite | Array<Sprite>;
 
 interface RendererProps { // "props" means "properties".
     v: HTMLImageElement | HTMLCanvasElement,
@@ -29,16 +28,11 @@ interface CanvasProps extends RendererProps {
     readonly scalable: false
 }
 
-export const gatheredAssets: {
-    htmlImages: Record<string, HTMLImageElement>,
-    canvases: Record<string, {c: HTMLCanvasElement, ctx: CanvasRenderingContext2D}>,
-    textures: Record<string, Texture>,
-    masks: Record<string, MaskParameters>
-} = {
-    htmlImages: {},
-    canvases: {},
-    textures: {},
-    masks: {}
+export const gatheredAssets = {
+    images: <{[index: string]: ImageProps}> {},
+    files: <{[index: string]: string}> {},
+    
+    subcanvasImages: <{[index: string]: CanvasProps}> {}
 };
 
 export interface HitboxParameters {
@@ -71,7 +65,9 @@ export interface ResourcesToLoad {
     images?: {[index: string]: string},
     audio?: {[index: string]: string},
     fonts?: {[index: string]: string[]},
-    file?: {[index: string]: string},
+    files?: {[index: string]: string},
+
+    subcanvasImagesBlacklist: ReadonlyArray<string>;
 
     audioVolumeNodes?: string[]
 }
@@ -91,8 +87,7 @@ interface AudioResource {
     v: AudioBuffer
 }
 interface FontResource {
-    type: "font",
-    font: FontFace
+    type: "font"
 }
 interface FileResource {
     type: "file",
@@ -108,15 +103,6 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
                 type: "image",
                 name: index,
                 source: resourcesToLoad.images[index]
-            });
-        }
-    }
-    if (resourcesToLoad.svg) {
-        for (let index in resourcesToLoad.svg) {
-            resourcesToLoadA.push({
-                type: "htmlImage",
-                name: index,
-                source: resourcesToLoad.svg[index]
             });
         }
     }
@@ -139,6 +125,15 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
                     source: source
                 });
             }
+        }
+    }
+    if (resourcesToLoad.files) {
+        for (let index in resourcesToLoad.files) {
+            resourcesToLoadA.push({
+                type: "file",
+                name: index,
+                source: resourcesToLoad.files[index]
+            });
         }
     }
 
@@ -164,34 +159,20 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
 
 
     function addResourcesToLoad(resourcesToLoadA: Source[]) {
-        async function promiseImage(name: string, url: string): Promise<ImageResource> {
-            try {
-                const asset = await Assets.load<Texture>({
-                    alias: name,
-                    src: url
-                });
-
-                updateProgressBar();
-                return {
-                    type: "image",
-                    name: name,
-                    v: asset
-                };
-            }
-            catch(error) {
-                displayError(url);
-                throw error;
-            }
-        }
-        async function promiseSvg(name: string, url: string): Promise<HTMLImageResource> {
+        function promiseImage(name: string, url: string): Promise<ImageResource> {
             return new Promise((resolve, reject)=>{
                 const image: HTMLImageElement = new Image();
                 image.onload = ()=>{
                     updateProgressBar();
                     resolve({
-                        type: "htmlImage",
+                        type: "image",
                         name: name,
-                        v: image
+                        v: {
+                            v: image,
+                            width: image.naturalWidth,
+                            height: image.naturalHeight,
+                            scalable: true
+                        }
                     });
                 };
                 image.onerror = ()=>{
@@ -201,23 +182,23 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
                 image.src = url;
             });
         }
-        async function promiseFont(name: string, url: string): Promise<FontResource> {
-            try {
-                await Assets.load({
-                    parser: "web-font",
-                    src: url,
-                    data: {
-                        family: name
-                    }
-                });
+        function promiseFont(name: string, url: string): Promise<FontResource> {
+            return new Promise((resolve, reject) => {
+                const font = new FontFace(name, `url(${url})`);
 
-                updateProgressBar();
-                return {type: "font"};
-            }
-            catch(error) {
-                displayError(url);
-                throw error;
-            }
+                font.load()
+                .then(loadedFont => {
+                    updateProgressBar();
+                    document.fonts.add(loadedFont);
+                    resolve({
+                        type: "font"
+                    });
+                })
+                .catch(() => {
+                    displayError(url);
+                    reject(Error(`Cannot load font: ${url}`));
+                });
+            });
         }
         async function promiseAudio(name: string, url: string): Promise<AudioResource> {
             try{
@@ -247,13 +228,10 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
             }
         }
 
-        const promises: Promise<ImageResource|HTMLImageResource|FontResource|AudioResource>[] = [];
+        const promises: Promise<ImageResource|AudioResource|FontResource|FileResource>[] = [];
         for (let source of resourcesToLoadA) {
             if (source.type === "image") {
                 promises.push(promiseImage(source.name, source.source));
-            }
-            if (source.type === "htmlImage") {
-                promises.push(promiseSvg(source.name, source.source));
             }
             if (source.type === "font") {
                 promises.push(promiseFont(source.name, source.source));
@@ -270,10 +248,7 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
     const resourcesLoadedA = await Promise.all(addResourcesToLoad(resourcesToLoadA));
     for (let resource of resourcesLoadedA) {
         if (resource.type === "image") {
-            gatheredAssets.textures[resource.name] = resource.v;
-        }
-        if (resource.type === "htmlImage") {
-            gatheredAssets.htmlImages[resource.name] = resource.v;
+            gatheredAssets.images[resource.name] = resource.v;
         }
         if (resource.type === "audio") {
             soundManager.audio[resource.name] = resource.v;
