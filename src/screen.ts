@@ -1,4 +1,4 @@
-import * as F from "@/core/functions";
+import { clamp, createCanvas } from "./core/functions";
 import { soundManager } from "@/core/sound_manager";
 
 import { Msg } from "@/editable/msg";
@@ -6,7 +6,7 @@ import { settings } from "@/editable/settings";
 import { m, messages, sf } from "@/core/sensing_properties";
 import { SpriteStorage } from "@/sprites/storage";
 import { showEl, hideEl, els, UI } from "@/dom";
-import { gatheredAssets, loadAssets, type CanvasProps, type ImageProps, type MaskParameters, type ResourcesToLoad } from "./core/asset_loader";
+import { gatheredAssets, loadAssets, type ImageProps, type MaskParameters, type ResourcesToLoad } from "./core/asset_loader";
 import type { Ctx2D } from "./core/base_classes";
 
 
@@ -72,8 +72,7 @@ class MaskCreator {
             offsetY: 0,
             width: width,
             height: height,
-            matrix: matrix,
-            calculateOriginPoint: true
+            matrix: matrix
         };
     }
 }
@@ -170,6 +169,7 @@ class Screen {
         try {
             if ((!window.debugTools) || (!window.debugTools.paused)) {
                 // STEP 2: handle the logic of objects
+                messages.broadcast(Msg.TICK);
                 this.s.updateSprites();
 
                 // STEP 3: draw
@@ -200,8 +200,8 @@ class Screen {
     //#region
     private getPointerPos(event: PointerEvent) {
         return {
-            x: F.clamp(((event.clientX-this.divCanvasPos.x) / m.realScale), 0, this.LOGICAL_WIDTH),
-            y: F.clamp(((event.clientY-this.divCanvasPos.y) / m.realScale), 0, this.LOGICAL_HEIGHT)
+            x: clamp(((event.clientX-this.divCanvasPos.x) / m.realScale), 0, this.LOGICAL_WIDTH),
+            y: clamp(((event.clientY-this.divCanvasPos.y) / m.realScale), 0, this.LOGICAL_HEIGHT)
         };
     }
     private deleteVirtualId(event: PointerEvent) {
@@ -431,12 +431,12 @@ class Screen {
     }
 
     private cacheSubcanvasImages() {
-        for (const imageName in gatheredAssets.images) {
-            gatheredAssets.subcanvasImages[imageName].v = this.imageToSubcanvas(gatheredAssets.images[imageName].v, m.scaleFactor);
+        for (const imageName in gatheredAssets.subcanvasImages) {
+            gatheredAssets.subcanvasImages[imageName].v = this.imageToSubcanvas(gatheredAssets.images[imageName].v, m.realScale);
         }
     }
     private imageToSubcanvas(image: HTMLImageElement, scaleFactor=1) {
-        const subcanvas = F.createCanvas(Math.ceil(image.naturalWidth*scaleFactor), Math.ceil(image.naturalHeight*scaleFactor));
+        const subcanvas = createCanvas(Math.ceil(image.naturalWidth*scaleFactor), Math.ceil(image.naturalHeight*scaleFactor));
         const subctx = subcanvas.getContext("2d")!;
         subctx.scale(scaleFactor, scaleFactor);
         subctx.drawImage(image, 0, 0);

@@ -225,7 +225,7 @@ export class Subcanvas {
     refresh(...parameters: any[]){
         const ctx1 = this.ctx;
         this.clear();
-        if (this.scaleSelf) ctx1.scale(m.scaleFactor, m.scaleFactor);
+        if (this.scaleSelf) ctx1.scale(m.realScale, m.realScale);
         this.draw(ctx1, ...parameters);
         if (this.scaleSelf) ctx1.resetTransform();
     }

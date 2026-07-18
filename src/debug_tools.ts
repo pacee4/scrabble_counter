@@ -105,4 +105,8 @@ export class DebugTools {
             }
         }
     }
+
+    setCustomValue(value: any) {
+        this.customValue = value;
+    }
 }

@@ -16,7 +16,7 @@ export interface Point {
 }
 
 /**
- * A sprite is an object on the screen, for which the way of interaction and logic is realized.
+ * A sprite is a visible object on the screen, for which the way of interaction and logic is realized.
  */
 export class Sprite {
     x: number;
@@ -30,6 +30,9 @@ export class Sprite {
      * The natural height of the sprite's image.
      */
     height = 0;
+    /**
+     * Defined using `gatheredAssets.images[key]` or `gatheredAssets.subcanvasImages[key]`
+     */
     image!: RendererProps | null;
 
     /**
@@ -97,7 +100,15 @@ export class Sprite {
         this.x += x;
         this.y += y;
     }
+    /** Scales the sprite proportionally. */
+    scaleTo(factor: number) {
+        this.scale.x = factor;
+        this.scale.y = factor;
+    }
 
+    /**
+     * @param image Defined using `gatheredAssets.images[key]` or `gatheredAssets.subcanvasImages[key]`
+     */
     constructor(x=0, y=0, image: RendererProps | null = null) {
         this.setImage(image);
         this.x = x;
@@ -146,7 +157,7 @@ export class Sprite {
     drawSelf(ctx: Ctx2D) {
         if (this.image!==null) {
             if (this.image.scalable) {
-                ctx.scale(m.scaleFactor, m.scaleFactor); // scale self
+                ctx.scale(m.realScale, m.realScale); // scale self
             }
             ctx.drawImage(this.image.v, 0, 0);
         }
@@ -156,6 +167,15 @@ export class Sprite {
         this.drawSelf(ctx);
     }
 
+    /** Positions, transforms, and draws the sprite on the canvas.
+     * 
+     * Order of execution:
+     * ```
+     * this.drawPosition(ctx)
+     * this.drawTransformation(ctx)
+     * this.drawResult(ctx)
+     * ```
+     */
     draw(ctx: Ctx2D) {
         this.drawPosition(ctx);
         this.drawTransformation(ctx);
@@ -164,173 +184,168 @@ export class Sprite {
 }
 
 
-// export abstract class ACompCollidable {
-//     constructor(protected sourceSprite: Sprite) {}
+export abstract class ACompCollidable {
+    constructor(protected sourceSprite: Sprite) {}
 
-//     abstract collidePoint(x: number, y: number): boolean;
+    abstract collidePoint(x: number, y: number): boolean;
 
-//     /** A virtual pointer index of 0 is also compatible with a mouse. */
-//     collidePointer(vId: number) {
-//         const touchProperty = m.pointers.get(vId);
-//         if (touchProperty) {
-//             return this.collidePoint(touchProperty.position.x, touchProperty.position.y);
-//         }
-//         return false;
-//     }
+    /** A virtual pointer index of 0 is also compatible with a mouse. */
+    collidePointer(vId: number) {
+        const touchProperty = m.pointers.get(vId);
+        if (touchProperty) {
+            return this.collidePoint(touchProperty.position.x, touchProperty.position.y);
+        }
+        return false;
+    }
 
    
-//     /** Finds which pointer is touching this object. 0 also can be the mouse. Returns -1 if none found. */
-//     collideAnyPointer() {
-//         for (const [touchIndex, touchProperty] of m.pointers.entries()) {
-//             if (this.collidePoint(touchProperty.position.x, touchProperty.position.y)) {
-//                 return touchIndex;
-//             }
-//         }
-//         return -1;
-//     }
-// }
+    /** Finds which pointer is touching this object. 0 also can be the mouse. Returns -1 if none found. */
+    collideAnyPointer() {
+        for (const [touchIndex, touchProperty] of m.pointers.entries()) {
+            if (this.collidePoint(touchProperty.position.x, touchProperty.position.y)) {
+                return touchIndex;
+            }
+        }
+        return -1;
+    }
+}
 
-// export class CompHitbox extends ACompCollidable {
-//     offsetX=0;
-//     offsetY=0;
-//     width=0;
-//     height=0;
-//     affectScale: boolean;
+export class CompHitbox extends ACompCollidable {
+    offsetX=0;
+    offsetY=0;
+    width=0;
+    height=0;
+    affectScale: boolean;
 
-//     constructor(sourceObject: Sprite, hitbox?: HitboxParameters, affectScale=false){
-//         super(sourceObject);
+    constructor(sourceObject: Sprite, hitbox?: HitboxParameters, affectScale=false){
+        super(sourceObject);
 
-//         this.affectScale = affectScale;
+        this.affectScale = affectScale;
         
-//         if (hitbox) {
-//             this.setHitbox(hitbox);
-//         }
-//         else {
-//             this.setHitboxAuto();
-//         }
-//     }
+        if (hitbox) {
+            this.setHitbox(hitbox);
+        }
+        else {
+            this.setHitboxAuto();
+        }
+    }
 
-//     calculateOriginPoint() {
-//         const bounds = this.sourceSprite.getLocalBounds();
-//         this.offsetX = bounds.minX;
-//         this.offsetY = bounds.minY;
-//     }
-//     setHitbox(hitbox: HitboxParameters) {
-//         this.offsetX = hitbox.offsetX;
-//         this.offsetY = hitbox.offsetY;
-//         this.width = hitbox.width;
-//         this.height = hitbox.height;
-//         if (hitbox.calculateOriginPoint) {
-//             this.calculateOriginPoint();
-//         }
-//     }
-//     setHitboxAuto() {
-//         this.calculateOriginPoint();
-//         const bounds = this.sourceSprite.getLocalBounds();
-//         this.width = bounds.width;
-//         this.height = bounds.height;
-//     }
+    calculateOriginPoint() {
+        this.offsetX = -this.sourceSprite.anchor.x;
+        this.offsetY = -this.sourceSprite.anchor.y;
+    }
+    setHitbox(hitbox: HitboxParameters) {
+        this.offsetX = hitbox.offsetX;
+        this.offsetY = hitbox.offsetY;
+        this.width = hitbox.width;
+        this.height = hitbox.height;
+    }
+    setHitboxAuto() {
+        this.calculateOriginPoint();
+        this.width = this.sourceSprite.width;
+        this.height = this.sourceSprite.height;
+    }
 
-//     hitboxCollidePoint(x: number, y: number){
-//         const src = this.sourceSprite;
-//         const scaleX = (this.affectScale) ? src.scale.x : 1;
-//         const scaleY = (this.affectScale) ? src.scale.y : 1;
+    hitboxCollidePoint(x: number, y: number){
+        const src = this.sourceSprite;
+        const scaleX = (this.affectScale) ? src.scale.x : 1;
+        const scaleY = (this.affectScale) ? src.scale.y : 1;
 
-//         let left = (src.x + (this.offsetX * scaleX));
-//         let top = (src.y + (this.offsetY * scaleY));
-//         return (
-//             (x >= left)
-//             && (x < left + (this.width * scaleX))
-//             && (y >= top)
-//             && (y < top + (this.height * scaleY))
-//         );
-//     }
+        let left = (src.x + (this.offsetX * scaleX));
+        let top = (src.y + (this.offsetY * scaleY));
+        return (
+            (x >= left)
+            && (x < left + (this.width * scaleX))
+            && (y >= top)
+            && (y < top + (this.height * scaleY))
+        );
+    }
 
-//     collidePoint(x: number, y: number): boolean {
-//         return this.hitboxCollidePoint(x, y);
-//     }
+    collidePoint(x: number, y: number): boolean {
+        return this.hitboxCollidePoint(x, y);
+    }
 
-//     collide(other: CompHitbox) {
-//         const src = this.sourceSprite;
-//         const oth = other.sourceSprite;
+    collide(other: CompHitbox) {
+        const src = this.sourceSprite;
+        const oth = other.sourceSprite;
 
-//         const scaleX = this.affectScale ? src.scale.x : 1;
-//         const scaleY = this.affectScale ? src.scale.y : 1;
-//         const left = src.x + (this.offsetX * scaleX);
-//         const top = src.y + (this.offsetY * scaleY);
+        const scaleX = this.affectScale ? src.scale.x : 1;
+        const scaleY = this.affectScale ? src.scale.y : 1;
+        const left = src.x + (this.offsetX * scaleX);
+        const top = src.y + (this.offsetY * scaleY);
 
-//         const oScaleX = other.affectScale ? oth.scale.x : 1;
-//         const oScaleY = other.affectScale ? oth.scale.y : 1;
-//         const oLeft = oth.x + (other.offsetX * oScaleX);
-//         const oTop = oth.y + (other.offsetY * oScaleY);
+        const oScaleX = other.affectScale ? oth.scale.x : 1;
+        const oScaleY = other.affectScale ? oth.scale.y : 1;
+        const oLeft = oth.x + (other.offsetX * oScaleX);
+        const oTop = oth.y + (other.offsetY * oScaleY);
 
-//         return (
-//             left + this.width * scaleX > oLeft &&
-//             left < oLeft + other.width * oScaleX &&
-//             top + this.height * scaleY > oTop &&
-//             top < oTop + other.height * oScaleY
-//         );
-//     }
-// }
+        return (
+            left + this.width * scaleX > oLeft &&
+            left < oLeft + other.width * oScaleX &&
+            top + this.height * scaleY > oTop &&
+            top < oTop + other.height * oScaleY
+        );
+    }
+}
 
-// export class CompMask extends CompHitbox {
-//     matrix: Uint8Array;
-//     constructor(sourceObject: Sprite, mask: MaskParameters, affectScale=false){
-//         super(sourceObject, mask, affectScale);
+export class CompMask extends CompHitbox {
+    matrix: Uint8Array;
+    constructor(sourceObject: Sprite, mask: MaskParameters, affectScale=false){
+        super(sourceObject, mask, affectScale);
 
-//         this.matrix = mask.matrix;
-//     }
+        this.matrix = mask.matrix;
+    }
 
-//     collidePoint(x: number, y: number, affectRotation=false): boolean {
-//         const src = this.sourceSprite;
-//         const affectScale = this.affectScale;
+    collidePoint(x: number, y: number, affectRotation=false): boolean {
+        const src = this.sourceSprite;
+        const affectScale = this.affectScale;
 
-//         const scaleX = affectScale ? src.scale.x : 1;
-//         const scaleY = affectScale ? src.scale.y : 1;
+        const scaleX = affectScale ? src.scale.x : 1;
+        const scaleY = affectScale ? src.scale.y : 1;
 
-//         let newX = x;
-//         let newY = y;
+        let newX = x;
+        let newY = y;
 
-//         if (affectRotation) {
-//             const rotatedXY = rotatePoint(x, y, src.rotation, src.x, src.y);
-//             newX = rotatedXY.x;
-//             newY = rotatedXY.y;
-//         }
+        if (affectRotation) {
+            const rotatedXY = rotatePoint(x, y, src.rotation, src.x, src.y);
+            newX = rotatedXY.x;
+            newY = rotatedXY.y;
+        }
 
-//         // Calculate local coordinates relative to the hitbox's upper-left corner
-//         const rx = ((newX - (src.x + this.offsetX * scaleX)) / scaleX) | 0;
-//         const ry = ((newY - (src.y + this.offsetY * scaleY)) / scaleY) | 0;
+        // Calculate local coordinates relative to the hitbox's upper-left corner
+        const rx = ((newX - (src.x + this.offsetX * scaleX)) / scaleX) | 0;
+        const ry = ((newY - (src.y + this.offsetY * scaleY)) / scaleY) | 0;
 
-//         const width = this.width;
+        const width = this.width;
 
-//         // check the matrix boundary
-//         if (rx < 0 || rx >= width || ry < 0 || ry >= this.height) {
-//             return false;
-//         }
+        // check the matrix boundary
+        if (rx < 0 || rx >= width || ry < 0 || ry >= this.height) {
+            return false;
+        }
 
-//         // Pixel index in one-dimensional array
-//         const i = rx + ry * width;
+        // Pixel index in one-dimensional array
+        const i = rx + ry * width;
 
-//         const byte = this.matrix[i >> 3];
+        const byte = this.matrix[i >> 3];
         
-//         // Use a left shift of the mask, inverting the logic
-//         return (byte & (0x80 >>> (i & 7))) !== 0;
-//     }
-// }
+        // Use a left shift of the mask, inverting the logic
+        return (byte & (0x80 >>> (i & 7))) !== 0;
+    }
+}
 
-// export class CompGroup extends ACompCollidable {
-//     group;
-//     constructor(sourceObject: Sprite, group: ACompCollidable[] = []){
-//         super(sourceObject);
-//         this.group = group;
-//     }
+export class CompGroup extends ACompCollidable {
+    group;
+    constructor(sourceObject: Sprite, group: ACompCollidable[] = []){
+        super(sourceObject);
+        this.group = group;
+    }
 
-//     collidePoint(x: number, y: number) {
-//         for (let collidable of this.group) {
-//             if (collidable.collidePoint(x, y)) {
-//                 return true;
-//             }
-//         }
-//         return false;
-//     }
-// }
+    collidePoint(x: number, y: number) {
+        for (let collidable of this.group) {
+            if (collidable.collidePoint(x, y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

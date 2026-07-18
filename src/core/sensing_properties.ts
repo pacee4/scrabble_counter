@@ -39,8 +39,7 @@ interface PointerProperty {
 class SensingProperties {
     readonly dp = window.devicePixelRatio;
     
-    realScale = 1;
-    get scaleFactor() { return this.realScale; }
+    realScale = 0;
     resolutionHasChanged = false;
 
     get isResized() { return this.resolutionHasChanged; }
@@ -130,12 +129,12 @@ class SensingProperties {
 export const m = new SensingProperties();
 
 export function sf(number: number) {
-    return number*m.scaleFactor;
+    return number*m.realScale;
 }
 /**
  * A value multiplied by the scale factor and rounded to an integer.
  * Use this function to position the images without blurring.
  */
 export function sfR(number: number) {
-    return Math.round(number*m.scaleFactor);
+    return Math.round(number*m.realScale);
 }

@@ -14,6 +14,7 @@ export function getResourcesToLoad(): ResourcesToLoad {
     return {
         images: {
             "green": "./assets/green.svg"
-        }
+        },
+        subcanvasImagesBlacklist: ["green"]
     };
 }

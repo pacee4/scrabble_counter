@@ -30,11 +30,11 @@ export interface CanvasProps extends RendererProps {
 
 export interface HitboxParameters {
     /**
-     * The offset by X from the sprite.
+     * The offset by X from the sprite's anchor point.
      */
     offsetX: number,
     /**
-     * The offset by Y from the sprite.
+     * The offset by Y from the sprite's anchor point.
      */
     offsetY: number,
     /**
@@ -44,11 +44,7 @@ export interface HitboxParameters {
     /**
      * The height of the hitbox.
      */
-    height: number,
-
-    calculateOriginPoint?: boolean,
-
-    matrix?: Uint8Array
+    height: number
 }
 export interface MaskParameters extends HitboxParameters {
     matrix: Uint8Array
