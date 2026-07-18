@@ -10,17 +10,9 @@ export type Ctx2D = CanvasRenderingContext2D;
 
 
 
-export class CompScale {
-    x = 1;
-    y = 1;
-}
-
-export class CompRotation {
-    angle = 0;
-}
-
-export class CompOpacity {
-    opacity = 1;
+export interface Point {
+    x: number,
+    y: number
 }
 
 /**
@@ -53,16 +45,16 @@ export class Sprite {
     new = true;
     layer = 0;
 
-    Scale?: CompScale;
-    Rotation?: CompRotation;
-    Opacity?: CompOpacity;
+    scale = {x: 1, y: 1};
+    rotation = 0;
+    opacity = 1;
 
     /**
      * The master sprite, without which this sprite will cease to exist.
      */
     master: Sprite|null = null;
 
-
+    
     realPositioning = false;
 
     /**
@@ -117,36 +109,37 @@ export class Sprite {
     
 
     drawPosition(ctx: Ctx2D) {
+        const drawingX = sf(this.x-this.anchor.x);
+        const drawingY = sf(this.y-this.anchor.y);
         if (this.realPositioning) {
-            ctx.translate(
-                sf(this.x-this.anchor.x),
-                sf(this.y-this.anchor.y)
-            );
+            ctx.translate(drawingX, drawingY);
         }
         else {
-            ctx.translate(
-                sfR(this.x-this.anchor.x),
-                sfR(this.y-this.anchor.y)
-            );
+            ctx.translate(Math.round(drawingX), Math.round(drawingY));
         }
     }
 
-    drawTransformation(ctx: Ctx2D){
-        if (this.Rotation || this.Scale) {
-            ctx.translate(sf(this.anchor.x), sf(this.anchor.y));
+    drawTransformation(ctx: CanvasRenderingContext2D){
+        const {x: sx, y: sy} = this.scale;
+        const rot = this.rotation;
+        const ax = sf(this.anchor.x);
+        const ay = sf(this.anchor.y);
 
-            if (this.Rotation) {
-                ctx.rotate(this.Rotation.angle);
+        if ((sx !== 1 || sy !== 1 || rot !== 0)) {
+            ctx.translate(ax, ay);
+
+            if (rot !== 0) {
+                ctx.rotate(rot);
             }
-            if (this.Scale) {
-                ctx.scale(this.Scale.x, this.Scale.y);
+            if (sx !== 1 || sy !== 1) {
+                ctx.scale(sx, sy);
             }
 
-            ctx.translate(sf(-this.anchor.x), sf(-this.anchor.y));
+            ctx.translate(-ax, -ay);
         }
 
-        if (this.Opacity) {
-            ctx.globalAlpha = clamp(this.Opacity.opacity, 0, 1);
+        if (this.opacity !== 1) {
+            ctx.globalAlpha = clamp(this.opacity, 0, 1);
         }
     }
 

@@ -11,5 +11,9 @@ export const settings: Readonly<{
 } as const)
 
 export function getResourcesToLoad(): ResourcesToLoad {
-    return {};
+    return {
+        images: {
+            "green": "./assets/green.svg"
+        }
+    };
 }

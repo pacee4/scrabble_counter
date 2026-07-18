@@ -6,7 +6,7 @@ import { settings } from "@/editable/settings";
 import { m, messages, sf } from "@/core/sensing_properties";
 import { SpriteStorage } from "@/sprites/storage";
 import { showEl, hideEl, els, UI } from "@/dom";
-import { gatheredAssets, loadAssets, type ImageProps, type MaskParameters, type ResourcesToLoad } from "./core/asset_loader";
+import { gatheredAssets, loadAssets, type CanvasProps, type ImageProps, type MaskParameters, type ResourcesToLoad } from "./core/asset_loader";
 import type { Ctx2D } from "./core/base_classes";
 
 
@@ -82,7 +82,7 @@ class MaskCreator {
 class Screen {
     private canvas = document.createElement("canvas");
     private ctx!: Ctx2D;
-    private s!: SpriteStorage; // DEBUG
+    private s!: SpriteStorage;
 
     private lastFrameMs = 0;
 
@@ -98,6 +98,20 @@ class Screen {
         this.ctx = this.canvas.getContext("2d")!;
 
         await loadAssets(resourcesToLoad);
+
+        // obtain subcanvas images
+        for (const imageName in gatheredAssets.images) {
+            if (resourcesToLoad.subcanvasImagesBlacklist?.includes(imageName)) {
+                continue;
+            }
+            const imageProp = gatheredAssets.images[imageName];
+            gatheredAssets.subcanvasImages[imageName] = {
+                v: this.imageToSubcanvas(imageProp.v),
+                width: imageProp.width,
+                height: imageProp.height,
+                scalable: false
+            };
+        }
 
         // obtain masks
         if (resourcesToLoad.masks) {
@@ -142,7 +156,7 @@ class Screen {
         messages.broadcast(Msg.START);
         requestAnimationFrame(this.tick);
     }
-    
+
     private tick = (currentMs: number)=>{
         // STEP 1: measure time
         m.time = currentMs/1000;
@@ -415,7 +429,6 @@ class Screen {
             this.divCanvasPos.y = divCanvasClientRect.y;
         }
     }
-
 
     private cacheSubcanvasImages() {
         for (const imageName in gatheredAssets.images) {

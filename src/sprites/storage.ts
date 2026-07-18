@@ -1,12 +1,17 @@
-import { Main } from "@/sprites/sprite_main";
-import { type Sprite } from "@/core/base_classes";
+import { type Ctx2D, type Sprite } from "@/core/base_classes";
 import { messages } from "@/core/sensing_properties";
+import { settings } from "@/editable/settings";
+
+import { Main } from "@/sprites/sprite_main";
+import { SBackground, SGreen } from "./sprites";
 
 // SPRITE STORAGE
 type SpriteOrArray = Sprite | Array<Sprite>;
 export class SpriteStorage {
     //#region 
     main = new Main();
+    background = new SBackground();
+    green = new SGreen();
 
     //#endregion
 
@@ -19,10 +24,11 @@ export class SpriteStorage {
      * a sprite is added, the closer to the screen layer it will be displayed.
      */
     sprites: SpriteOrArray[] = [
-        this.main
+        this.main, this.background, this.green
     ];
 
     //#region
+    private readonly MAX_LAYERS = settings.MAX_LAYERS ?? 1;
     constructor() {
         s = this;
     }
@@ -86,6 +92,32 @@ export class SpriteStorage {
             else {
                 if (obj.new) {
                     obj.new = false;
+                }
+            }
+        }
+    }
+
+    /**@ignore */
+    drawSprites(ctx: Ctx2D) {
+        for (let layer = 0; layer <= this.MAX_LAYERS; layer++) {
+            for (let obj of this.sprites) {
+                if (Array.isArray(obj)) {
+                    for (let sprite of obj) {
+                        if (sprite.visible && layer === sprite.layer) {
+                            ctx.save();
+                            sprite.draw(ctx);
+                            ctx.restore();
+                            ctx.resetTransform();
+                        }
+                    }
+                }
+                else {
+                    if (obj.visible && layer === obj.layer) {
+                        ctx.save();
+                        obj.draw(ctx);
+                        ctx.restore();
+                        ctx.resetTransform();
+                    }
                 }
             }
         }

@@ -61,8 +61,8 @@ export interface ResourcesToLoad {
     fonts?: {[index: string]: string[]},
     files?: {[index: string]: string},
 
-    masks: ReadonlyArray<string>;
-    subcanvasImagesBlacklist: ReadonlyArray<string>;
+    masks?: ReadonlyArray<string>;
+    subcanvasImagesBlacklist?: ReadonlyArray<string>;
 
     audioVolumeNodes?: string[]
 }

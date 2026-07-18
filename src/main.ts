@@ -11,8 +11,8 @@ if (!window.loadingError) {
         window.removeLoadingEventListeners = null;
     })
     .catch((error)=>{
-        displayError(String(error));
         console.error(error);
+        displayError(String(error));
     });
 }
 
