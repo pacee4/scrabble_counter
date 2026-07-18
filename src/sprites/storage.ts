@@ -1,109 +1,91 @@
-import * as PIXI from "pixi.js";
-import * as F from "@/core/functions";
-import { Msg } from "@/editable/msg";
-import { TopLogicObject, TopSprite, TopContainer, Collection, ObjectPool, AutoCollection } from "@/core/base_classes";
-import { messages, layers } from "@/core/sensing_properties";
-
 import { Main } from "@/sprites/sprite_main";
+import { type Sprite } from "@/core/base_classes";
+import { messages } from "@/core/sensing_properties";
 
 // SPRITE STORAGE
-type TopObjectOrCollection = TopLogicObject|Collection;
+type SpriteOrArray = Sprite | Array<Sprite>;
 export class SpriteStorage {
     //#region 
     main = new Main();
 
     //#endregion
-    
-    objectList(): TopObjectOrCollection[] {
-        // add objects to the logic and drawing order (EDITABLE)
-        return [
-            this.main
-        ];
-    }
+
+    /**
+     * Add objects to the logic and drawing order (EDITABLE).
+     * 
+     * The order in which sprites are added to this collection
+     * is the order in which their logic is executed in the
+     * `messageStep` method and they are drawn in the `draw()` method. The lower
+     * a sprite is added, the closer to the screen layer it will be displayed.
+     */
+    sprites: SpriteOrArray[] = [
+        this.main
+    ];
 
     //#region
-    /** The basic container of all objects */
-    readonly container: PIXI.Container<TopObjectOrCollection | PIXI.RenderLayer> = new PIXI.Container();
-
     constructor() {
         s = this;
-
-        this.container.interactiveChildren = false;
-        this.container.accessibleChildren = false;
-        this.container.cullableChildren = false;
-
-        for (let topObject of this.objectList()) {
-            this.container.addChild(topObject);
-        }
-        // add layers for rendering objects
-        for (let layer of layers) {
-            this.container.addChild(layer);
-        }
     }
 
+
     /**@ignore */
-    updateObjects() {
+    updateSprites() {
         // messageStep
-        messages.broadcast(Msg.TICK);
-        const objectsToDelete: TopLogicObject[] = [];
         while (messages.hasMessages()) {
             let message = messages.obtain()!;
             if (window.debugTools && window.debugTools.logMessages) {
                 window.debugTools.calledMessages.push(message)
-            };
+            }
 
-            for (const topElement of this.container.children) {
-                if (topElement instanceof Collection) {
-                    for (const child of topElement.children) {
-                        if (child.enabled && !child.new && !(child.delete || (child.master && child.master.delete))) {
-                            child.messageStep(message);
+            for (const obj of this.sprites) {
+                if (Array.isArray(obj)) {
+                    // it is a group
+                    for (const sprite of obj) {
+                        if (!sprite.new && !sprite.delete && !(sprite.master && sprite.master.delete)) {
+                            sprite.messageStep(message);
                         }
                     }
                 }
-                else if (!(topElement instanceof PIXI.RenderLayer)) {
-                    if (topElement.enabled && !topElement.new) {
-                        topElement.messageStep(message);
+                else {
+                    // it is a sprite
+                    if (!obj.new && !obj.delete && !(obj.master && obj.master.delete)) {
+                        obj.messageStep(message);
                     }
                 }
             }
         }
 
-        // handle deletion of objects
-        for (const topElement of this.container.children) {
-            if (topElement instanceof Collection) {
-                for (const child of topElement.children) {
-                    if (child.delete || (child.master && child.master.delete)) {
-                        child.delete = true;
-                        objectsToDelete.push(child);
+        // handle deletion of sprites
+        for (const group of this.sprites) {
+            if (Array.isArray(group)) {
+                for (let i = group.length-1; i >= 0; i-=1) {
+                    const sprite = group[i];
+                    if (
+                        sprite.delete
+                        || (sprite.master && sprite.master.delete) // if the slave's master is deleted, delete the slave
+                    ) {
+                        group.splice(i, 1); // deletes the sprite from its group
                     }
                 }
             }
         }
-        for (const child of objectsToDelete) {
-            if (child.belongsToPool) {
-                child.belongsToPool.release(child);
-            }
-            else {
-                child.destroy(child.deleteOptionsH);
-            }
-        }
 
-        this.takeNewFromObjects();
+        this.takeNewFromSprites();
     }
 
     /**@ignore */
-    takeNewFromObjects(){
-        for (const topElement of this.container.children) {
-            if (topElement instanceof Collection) {
-                for (const child of topElement.children) {
-                    if (child.new) {
-                        child.new = false;
+    takeNewFromSprites(){
+        for (const obj of this.sprites) {
+            if (Array.isArray(obj)) {
+                for (const sprite of obj) {
+                    if (sprite.new) {
+                        sprite.new = false;
                     }
                 }
             }
-            else if (!(topElement instanceof PIXI.RenderLayer)) {
-                if (topElement.new) {
-                    topElement.new = false;
+            else {
+                if (obj.new) {
+                    obj.new = false;
                 }
             }
         }
@@ -111,23 +93,6 @@ export class SpriteStorage {
     //#endregion
 }
 
-/** When constructing a sprite while the project is loading, the sprite storage is not yet accessible.
- * 
- * Example 1: pass another sprite as a constructor parameter
- * ```
- * constructor(another_sprite: SAnotherSprite) {
- *      console.log(another_sprite);
- * }
- * ```
- * Example 2: obtain another sprite from the storage when the message `Msg.START` is broadcast
- * ```
- * messageStep(message: Msg) {
- *      switch (message) {
- *          case Msg.START:
- *              console.log(s.another_sprite);
- *              break;
- *      }
- * }
- * ```
- */
+/** When constructing a sprite while the project is loading, the sprite
+ * storage is not yet accessible. */
 export let s: SpriteStorage = (undefined as any);

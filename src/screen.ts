@@ -82,7 +82,7 @@ class MaskCreator {
 class Screen {
     private canvas = document.createElement("canvas");
     private ctx!: Ctx2D;
-    private s!: any; // DEBUG
+    private s!: SpriteStorage; // DEBUG
 
     private lastFrameMs = 0;
 
@@ -123,7 +123,7 @@ class Screen {
 
         // create the sprite storage
         this.s = new SpriteStorage();
-        this.s.takeNewFromObjects();
+        this.s.takeNewFromSprites();
 
 
         this.setEventListeners();
@@ -142,7 +142,8 @@ class Screen {
         messages.broadcast(Msg.START);
         requestAnimationFrame(this.tick);
     }
-    private tick(currentMs: number) {
+    
+    private tick = (currentMs: number)=>{
         // STEP 1: measure time
         m.time = currentMs/1000;
         m.delta = (currentMs - this.lastFrameMs)/1000;
@@ -155,7 +156,7 @@ class Screen {
         try {
             if ((!window.debugTools) || (!window.debugTools.paused)) {
                 // STEP 2: handle the logic of objects
-                this.s.updateObjects();
+                this.s.updateSprites();
 
                 // STEP 3: draw
                 // clear canvas
