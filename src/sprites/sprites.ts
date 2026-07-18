@@ -3,7 +3,11 @@ import * as C from "@/editable/custom";
 import { CtxToolkit } from "@/editable/custom";
 import { m, messages, sf, sfR } from "@/core/sensing_properties";
 import { g, type MoveDataWithScore } from "@/editable/global_properties";
+import { CtxToolkit } from "@/editable/custom";
+import { m, messages, sf, sfR } from "@/core/sensing_properties";
+import { g, type MoveDataWithScore } from "@/editable/global_properties";
 
+import { ACompCollidable, CompHitbox, CompMask, Sprite, type Ctx2D } from "@/core/base_classes";
 import { ACompCollidable, CompHitbox, CompMask, Sprite, type Ctx2D } from "@/core/base_classes";
 import { Msg } from "@/editable/msg";
 import { settings } from "@/editable/settings";
