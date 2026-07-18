@@ -1,13 +1,14 @@
-import * as PIXI from "pixi.js";
 import * as F from "@/core/functions";
 import { soundManager } from "@/core/sound_manager";
 
 import { Msg } from "@/editable/msg";
 import { settings } from "@/editable/settings";
-import { m, messages, dp } from "@/core/sensing_properties";
-import { MaskParameters, ResourcesToLoad, loadAssets, gatheredAssets } from "@/core/asset_loader";
+import { m, messages, sf } from "@/core/sensing_properties";
 import { SpriteStorage } from "@/sprites/storage";
 import { showEl, hideEl, els, UI } from "@/dom";
+import { gatheredAssets, loadAssets, type ImageProps, type MaskParameters, type ResourcesToLoad } from "./core/asset_loader";
+import type { Ctx2D } from "./core/base_classes";
+
 
 if (import.meta.env.DEV) {
     import("@/debug_tools").then((module)=>{
@@ -15,20 +16,6 @@ if (import.meta.env.DEV) {
     });
 }
 
-/** The text will always remain smooth at any screen zoom. */
-export class SmoothText extends PIXI.Text {
-    constructor(options?: PIXI.CanvasTextOptions) {
-        super(options);
-
-        // add
-        screen.holder.texts.add(this);
-        screen.updateTextResolution(this);
-        // handle destroy
-        this.addListener("destroyed", ()=>{
-            screen.holder.texts.delete(this);
-        });
-    }
-}
 
 class MaskCreator {
     private canvas: HTMLCanvasElement;
@@ -40,12 +27,12 @@ class MaskCreator {
         this.ctxM = this.canvas.getContext("2d", {willReadFrequently: true})!;
     }
 
-    createMask(image: HTMLImageElement, alphaThreshold=0.5): MaskParameters {
-        this.ctxM.drawImage(image, 0, 0);
+    createMask(image: ImageProps, alphaThreshold=0.5): MaskParameters {
+        this.ctxM.drawImage(image.v, 0, 0);
 
         // mask matrix the size of a target image
-        const width = image.naturalWidth;
-        const height = image.naturalHeight;
+        const width = image.width;
+        const height = image.height;
         const pixels = this.ctxM.getImageData(0, 0, width, height);
 
         const matrix = new Uint8Array( Math.ceil(width*height/8) );
@@ -89,144 +76,43 @@ class MaskCreator {
             calculateOriginPoint: true
         };
     }
-
-    static createMaskFromPixels(data: PIXI.GetPixelsOutput, alphaThreshold=0.5): MaskParameters {
-        const matrix = new Uint8Array( Math.ceil(data.width*data.height/8) );
-        const thresholdValue = Math.round(alphaThreshold * 254);
-
-        // mask matrix the size of a target image
-        let B = 0; // byte
-        let b = 0; // bit
-        let currentByte = 0;
-        
-        let i = 3; // begin with the alpha-channel of the first pixel
-        const len = data.pixels.length;
-
-        while (i < len) {
-            currentByte = currentByte << 1;
-            if (data.pixels[i] > thresholdValue) { // if the pixel is opaque
-                currentByte += 1;
-            }
-
-            // increment the bit
-            b++;
-            if (b >= 8) {
-                matrix[B] = currentByte;
-                currentByte = 0;
-                b = 0;
-                B++;
-            }
-            i += 4;
-        }
-        // Write the remaining bits if the size is not a multiple of 8
-        if (b > 0) {
-            matrix[B] = currentByte << (8 - b);
-        }
-        
-        return {offsetX: 0, offsetY: 0, width: data.width, height: data.height, matrix: matrix};
-    }
 }
  
 
 class Screen {
-    private app;
-    private realScale = 0;
-    private integerResolution = 0;
-    private offscreenRenderer;
-    private screenSprite;
-    private antialias;
+    private canvas = document.createElement("canvas");
+    private ctx!: Ctx2D;
+    private s!: any; // DEBUG
+
+    private lastFrameMs = 0;
+
     private readonly LOGICAL_WIDTH = settings.SCREEN_WIDTH;
     private readonly LOGICAL_HEIGHT = settings.SCREEN_HEIGHT;
-    private s!: SpriteStorage;
-
+    private SCALED_WIDTH = this.LOGICAL_WIDTH;
+    private SCALED_HEIGHT = this.LOGICAL_HEIGHT;
     private readonly divCanvasPos = {x: 0, y: 0}; // need for correct mouse/pointer position
 
     private readonly virtualIds = new Map<number, number>();
-    
-    readonly holder: {
-        texts: Set<SmoothText>
-    } = {
-        texts: new Set()
-    }
 
-    constructor(private quality: "low"|"high" = "high") {
-        this.antialias = (this.quality === "high");
-        this.app = new PIXI.Application();
-
-        this.offscreenRenderer = PIXI.RenderTexture.create({
-            width: this.LOGICAL_WIDTH,
-            height: this.LOGICAL_HEIGHT,
-            dynamic: true, // so that it can visually resize
-            resolution: dp, // set the offscreen resolution here too
-            
-            antialias: this.antialias,
-        });
-
-        // screen display sprite
-        this.screenSprite = new PIXI.Sprite(this.offscreenRenderer);
-        this.screenSprite.position.set(0, 0);
-    }
- 
     public async init(resourcesToLoad: ResourcesToLoad) {
-        // set up the application
-        await this.app.init({
-            resizeTo: els.divCanvas,
-            antialias: false,
-            resolution: dp,
-            backgroundColor: "#f0f0f0"
-        });
-        this.app.canvas.id = "canvas";
+        this.ctx = this.canvas.getContext("2d")!;
 
-        // load assets and wait
         await loadAssets(resourcesToLoad);
-
-        // initially make textures from HTML images through Canvas API
-        for (let key in gatheredAssets.htmlImages) {
-            const c = document.createElement("canvas");
-            const ctx = c.getContext("2d")!;
-            gatheredAssets.canvases[key] = {
-                c: c,
-                ctx: ctx
-            };
-
-            c.width = gatheredAssets.htmlImages[key].naturalWidth;
-            c.height = gatheredAssets.htmlImages[key].naturalHeight;
-
-            ctx.scale(1, 1);
-            ctx.drawImage(gatheredAssets.htmlImages[key], 0, 0);
-
-            const canvasSource = new PIXI.CanvasSource({
-                resource: c
-            });
-            gatheredAssets.textures[key] = new PIXI.Texture(canvasSource);
-        }
-
-        // change scaling mode of some images to nearest
-        if (resourcesToLoad.nearestFilterImages) {
-            for (let key of resourcesToLoad.nearestFilterImages) {
-                gatheredAssets.textures[key].source.scaleMode = "nearest";
-            }
-        }
 
         // obtain masks
         if (resourcesToLoad.masks) {
             const maskCreator = new MaskCreator(screen.LOGICAL_WIDTH, screen.LOGICAL_HEIGHT);
 
             for (let maskSource of resourcesToLoad.masks) {
-                if (gatheredAssets.htmlImages[maskSource]) {
-                    gatheredAssets.masks[maskSource] = maskCreator.createMask(gatheredAssets.htmlImages[maskSource]);
-                }
-                else if (gatheredAssets.textures[maskSource]) {
-                    const texture = gatheredAssets.textures[maskSource];
-                    const data = this.app.renderer.extract.pixels(texture); // obtain pixels
-                    gatheredAssets.masks[maskSource] = MaskCreator.createMaskFromPixels(data);
+                if (gatheredAssets.images[maskSource]) {
+                    gatheredAssets.masks[maskSource] = maskCreator.createMask(gatheredAssets.images[maskSource]);
                 }
                 else {
                     console.warn(`The texture key is not found to create the mask from: ${maskSource}`)
                 }
             }
         }
-        
+
         // obtain volume nodes
         if (resourcesToLoad.audioVolumeNodes && soundManager.audioCtx) {
             soundManager.volumeNodes.set("general", soundManager.audioCtx.createGain());
@@ -239,64 +125,14 @@ class Screen {
         this.s = new SpriteStorage();
         this.s.takeNewFromObjects();
 
-        // add the screen sprite
-        this.app.stage.interactiveChildren = false;
-        this.app.stage.accessibleChildren = false;
-        this.app.stage.addChild(this.screenSprite);
-        
-        // add ticker
-        this.app.ticker.add((time)=>{
-            if (window.debugTools && window.debugTools.isShown()) {
-                window.debugTools.updateDebugInfo(time.deltaMS/1000);
-            }
-            try {
-                if ((!window.debugTools) || (!window.debugTools.paused)) {
-                    // STEP 1: measure time
-                    m.delta = time.deltaMS/1000;
-                    if (m.delta > 0.5) {m.delta = 0;}
-                    m.time += m.delta;
-                    
-                    // STEP 2: handle the logic of objects
-                    this.s.updateObjects();
 
-                    // STEP 3: draw
-                    this.renderOffscreen();
-
-                    // STEP 4: pass user input
-                    for (let value of m.keyboardCodes.values()) {
-                        if (!value.holding) {
-                            value.holding = true;
-                        }
-                    }
-                    for (let value of m.pointers.values()) {
-                        if (!value.holding) {
-                            value.holding = true;
-                        }
-                    }
-
-                    if (m.resolutionHasChanged) {m.resolutionHasChanged = false;}
-
-                    if (window.debugTools && window.debugTools.logMessages) {
-                        console.log(`Messages: ${window.debugTools.calledMessages.map(msg=>msg.toString()).join(", ")}`);
-                        window.debugTools.calledMessages.splice(0);
-                    }
-                }
-            }
-            catch(error){
-                this.app.ticker.stop();console.error(error);alert(error);
-                if (window.debugTools && window.debugTools.logMessages) {
-                    console.log(`Messages: ${window.debugTools.calledMessages.map(msg=>msg.toString()).join(", ")}`);
-                }
-            }
-        });
         this.setEventListeners();
-
         // set width and height of #divCanvasElements
         els.divCanvasElements.style.width = `${this.LOGICAL_WIDTH}px`;
         els.divCanvasElements.style.height =`${this.LOGICAL_HEIGHT}px`;
 
         // Show game
-        els.divCanvas.insertBefore(this.app.canvas, els.divCanvas.firstChild);
+        els.divCanvas.insertBefore(this.canvas, els.divCanvas.firstChild);
 
         document.getElementById("g-divProgressBar")!.remove(); // Delete the progress bar overlay
         showEl(els.divGame);
@@ -304,13 +140,53 @@ class Screen {
         // important on load
         this.onResize();
         messages.broadcast(Msg.START);
+        requestAnimationFrame(this.tick);
+    }
+    private tick(currentMs: number) {
+        // STEP 1: measure time
+        m.time = currentMs/1000;
+        m.delta = (currentMs - this.lastFrameMs)/1000;
+        if (m.delta > 0.5) {m.delta = 0;}
+        this.lastFrameMs = currentMs;
+        
+        if (window.debugTools && window.debugTools.isShown()) {
+            window.debugTools.updateDebugInfo(m.delta);
+        }
+        try {
+            if ((!window.debugTools) || (!window.debugTools.paused)) {
+                // STEP 2: handle the logic of objects
+                this.s.updateObjects();
+
+                // STEP 3: draw
+                // clear canvas
+                this.ctx.clearRect(0, 0, this.SCALED_WIDTH, this.SCALED_HEIGHT);
+                // draw sprites
+                this.s.drawSprites(this.ctx);
+
+                // pass tick
+                if (m.resolutionHasChanged) {m.resolutionHasChanged = false;}
+                if (window.debugTools && window.debugTools.logMessages) {
+                    console.log(`Messages: ${window.debugTools.calledMessages.map(msg=>msg.toString()).join(", ")}`);
+                    window.debugTools.calledMessages.splice(0);
+                }
+            }
+            window.requestAnimationFrame(this.tick);
+        }
+        catch(error){
+            console.error(error);alert(error);
+            if (window.debugTools && window.debugTools.logMessages) {
+                console.log(`Messages: ${window.debugTools.calledMessages.map(msg=>msg.toString()).join(", ")}`);
+            }
+        }
     }
 
 
+    // Set event listeners
+    //#region
     private getPointerPos(event: PointerEvent) {
         return {
-            x: F.clamp(((event.clientX-this.divCanvasPos.x) / this.realScale), 0, this.LOGICAL_WIDTH),
-            y: F.clamp(((event.clientY-this.divCanvasPos.y) / this.realScale), 0, this.LOGICAL_HEIGHT)
+            x: F.clamp(((event.clientX-this.divCanvasPos.x) / m.realScale), 0, this.LOGICAL_WIDTH),
+            y: F.clamp(((event.clientY-this.divCanvasPos.y) / m.realScale), 0, this.LOGICAL_HEIGHT)
         };
     }
     private deleteVirtualId(event: PointerEvent) {
@@ -355,7 +231,7 @@ class Screen {
                 this.onResize();
             }
             else {
-                if (window.innerHeight*dp < parseInt(els.divCanvas.style.height)) { // if the viewport height is less than canvas height (in device pixels)
+                if (window.innerHeight*m.dp < parseInt(els.divCanvas.style.height)) { // if the viewport height is less than canvas height (in device pixels)
                     els.divCanvasPositioning.classList.add("js-input-scrollable");
                 } else {
                     els.divCanvasPositioning.classList.remove("js-input-scrollable");
@@ -374,7 +250,7 @@ class Screen {
                     if (!els.divCanvasPositioning.classList.contains("js-input-scrollable")) {
                         const target = <HTMLElement|null>event.target;
                         if (target && (
-                            (target === this.app.canvas
+                            (target === this.canvas
                             || target === els.divCanvasPositioning
                             || target === els.divCanvasElements
                             || target.classList.contains("transparent"))
@@ -396,7 +272,7 @@ class Screen {
         els.divCanvas.addEventListener("contextmenu", (event)=>{
             const target = <HTMLElement|null>event.target;
             if (target && (
-                target === this.app.canvas
+                target === this.canvas
                 || target === els.divCanvasElements
                 || target.classList.contains("transparent"))
             ) {
@@ -498,17 +374,7 @@ class Screen {
         // event listeners for orientation detection and fullscreen toggle
         UI.setGameEvents();
     }
-
-
-    private renderOffscreen() {
-        // render the original container to the intermediate this.offscreenRenderer
-        this.app.renderer.render({
-            container: this.s.container,
-            target: this.offscreenRenderer,
-            clear: true
-        });
-    }
-
+    //#endregion
 
     private onResize() {
         const screenWidth = window.innerWidth;
@@ -516,20 +382,30 @@ class Screen {
 
         // calculate realScale
         const newRealScale = Math.min(screenWidth / this.LOGICAL_WIDTH, screenHeight / this.LOGICAL_HEIGHT);
-        if (this.realScale !== newRealScale && newRealScale > 0.05) {
-            this.realScale = newRealScale;
-            this.updateScaleContainer(
-                this.LOGICAL_WIDTH * this.realScale,
-                this.LOGICAL_HEIGHT * this.realScale
-            );
+        if (newRealScale !== m.realScale && newRealScale > 0.05) {
+            m.resolutionHasChanged = true; // later - false
+            m.realScale = newRealScale;
+
+            const newWidth = Math.floor(sf(this.LOGICAL_WIDTH));
+            const newHeight = Math.floor(sf(this.LOGICAL_HEIGHT));
+
+            this.SCALED_WIDTH = newWidth;
+            this.SCALED_HEIGHT = newHeight;
+
+            // resize divCanvas
+            els.divCanvas.style.width = `${Math.floor(newWidth/m.dp)}px`;
+            els.divCanvas.style.height = `${Math.floor(newHeight/m.dp)}px`;
+            this.canvas.style.width = `${Math.floor(newWidth/m.dp)}px`;
+            this.canvas.style.height = `${Math.floor(newHeight/m.dp)}px`;
+
+            // resize canvas
+            this.canvas.width = newWidth;
+            this.canvas.height = newHeight;
+
+            this.cacheSubcanvasImages();
 
             // scale elements
-            els.divCanvasElements.style.transform = `scale(${this.realScale})`;
-
-            if (this.integerResolution !== Math.ceil(this.realScale*dp)) {
-                this.integerResolution = Math.ceil(this.realScale*dp);
-                this.updateTextureResolution();
-            }
+            els.divCanvasElements.style.transform = `scale(${newRealScale/m.dp})`;
         }
         // calculate position of divCanvas
         {
@@ -540,90 +416,18 @@ class Screen {
     }
 
 
-    private updateScaleContainer(targetWidth: number, targetHeight: number) {
-        // resize divCanvas and canvas to fit
-        els.divCanvas.style.width = Math.floor(targetWidth)+"px";
-        els.divCanvas.style.height = Math.floor(targetHeight)+"px";
-        this.app.canvas.style.width = Math.floor(targetWidth)+"px";
-        this.app.canvas.style.height = Math.floor(targetHeight)+"px";
-
-        // resize the screen
-        this.app.queueResize();
-
-        // scale the container
-        this.s.container.scale = this.realScale;
-        this.offscreenRenderer.resize(Math.floor(targetWidth), Math.floor(targetHeight));
-    }
-
-
-    private updateTextureResolution() {
-        m.resolutionHasChanged = true;
-
-        // resize the canvas to a new resolution
-        for (let key in gatheredAssets.htmlImages) {
-            const img = gatheredAssets.htmlImages[key];
-            const {c, ctx} = gatheredAssets.canvases[key];
-            c.width = img.naturalWidth*this.integerResolution;
-            c.height = img.naturalHeight*this.integerResolution;
-
-            ctx.scale(this.integerResolution, this.integerResolution);
-            ctx.drawImage(img, 0, 0);
-
-            // apply texture change
-            gatheredAssets.textures[key].source.resolution = this.integerResolution;
-            gatheredAssets.textures[key].source.update();
-        }
-
-        // change the resolution to texts
-        for (let text of this.holder.texts) {
-            text.resolution = this.integerResolution;
-        }
-
-        console.log("integer resolution changed:", this.integerResolution);
-    }
-
-
-    public changeQuality(quality: "low"|"high") {
-        if (quality !== this.quality) {
-            this.quality = quality;
-            console.log("change quality to "+quality);
-            this.antialias = (this.quality === "high");
-
-            // recreate the renderer
-            {
-                this.offscreenRenderer.destroy();
-                this.offscreenRenderer = PIXI.RenderTexture.create({
-                    width: this.LOGICAL_WIDTH,
-                    height: this.LOGICAL_HEIGHT,
-                    dynamic: true, // so that it can visually resize
-                    resolution: dp, // set the offscreen resolution here too
-                    
-                    antialias: this.antialias,
-                });
-                this.updateScaleContainer(
-                    this.LOGICAL_WIDTH * this.realScale,
-                    this.LOGICAL_HEIGHT * this.realScale
-                );
-                this.screenSprite.texture = this.offscreenRenderer;
-            }
-
-            
+    private cacheSubcanvasImages() {
+        for (const imageName in gatheredAssets.images) {
+            gatheredAssets.subcanvasImages[imageName].v = this.imageToSubcanvas(gatheredAssets.images[imageName].v, m.scaleFactor);
         }
     }
-
-
-    public updateTextResolution(text: SmoothText) {
-        text.resolution = this.integerResolution;
-    }
-
-
-    public graphicsToTexture(graphics: PIXI.Graphics) {
-        return this.app.renderer.generateTexture({
-            target: graphics,
-            resolution: this.integerResolution,
-            antialias: this.antialias
-        });
+    private imageToSubcanvas(image: HTMLImageElement, scaleFactor=1) {
+        const subcanvas = F.createCanvas(Math.ceil(image.naturalWidth*scaleFactor), Math.ceil(image.naturalHeight*scaleFactor));
+        const subctx = subcanvas.getContext("2d")!;
+        subctx.scale(scaleFactor, scaleFactor);
+        subctx.drawImage(image, 0, 0);
+        return subcanvas;
     }
 }
 //#endregion
-export const screen = new Screen("high");
+export const screen = new Screen();

@@ -1,5 +1,7 @@
+import type { Ctx2D } from "@/core/base_classes";
+
 import * as F from "@/core/functions";
-import { m } from "@/core/sensing_properties";
+import { m, sfR } from "@/core/sensing_properties";
 
 
 export function getColorFromGradient(colors=["#000000","#ffffff"], factor=0) {
@@ -169,5 +171,78 @@ export class AnimationSequence {
             duration: anim.duration,
             percent: (anim.duration > 0) ? time/anim.duration : 0
         }
+    }
+}
+
+
+export class Subcanvas {
+    c: HTMLCanvasElement;
+    ctx: Ctx2D;
+    /**
+     * Original width
+     */
+    width: number;
+    /**
+     * Original height
+     */
+    height: number;
+
+    /**
+     * A set of functions for drawing on the sub-canvas
+     * using the `refresh` method. Instead of passing parameters to the
+     * method, use class members or global properties.
+     */
+    draw:(subcanvasCtx: Ctx2D, ...parameters: any[])=>void;
+    currentWidth = 0;
+    currentHeight = 0;
+
+    private readonly scaleSelf: boolean;
+
+    /**
+     * Creates a subcanvas. Call the method `resizeToFactor` to begin using it.
+     * @param width Original width
+     * @param height Original height
+     * @param draw A set of functions for drawing on the subcanvas using the `refresh` method. Instead of passing parameters to the method, use class members or global properties.
+     * @param properties `scaleSelf`; `autoResize`
+     */
+    constructor(width: number, height: number, draw:(subcanvasCtx: Ctx2D, ...parameters: any[])=>void, properties?: {
+        scaleSelf?: boolean,
+        autoResize?: boolean
+    }) {
+        this.scaleSelf = (properties?.scaleSelf) ? properties.scaleSelf : false;
+        this.draw = draw;
+
+        this.c = document.createElement("canvas");
+        this.ctx = this.c.getContext("2d")!;
+        this.width = width;
+        this.height = height;
+        if (properties?.autoResize) this.resizeToFactor();
+    }
+
+    /**
+     * Redraws the subcanvas according to the `draw` method.
+     */
+    refresh(...parameters: any[]){
+        const ctx1 = this.ctx;
+        this.clear();
+        if (this.scaleSelf) ctx1.scale(m.scaleFactor, m.scaleFactor);
+        this.draw(ctx1, ...parameters);
+        if (this.scaleSelf) ctx1.resetTransform();
+    }
+
+    resizeToFactor(){
+        this.c.width = sfR(this.width);
+        this.c.height = sfR(this.height);
+
+        return this;
+    }
+    clear(){
+        this.ctx.clearRect(0, 0, this.c.width, this.c.height);
+    }
+    /**
+     * Displays the subcanvas on the screen.
+     */
+    display(ctx: Ctx2D) {
+        ctx.drawImage(this.c, 0, 0);
     }
 }

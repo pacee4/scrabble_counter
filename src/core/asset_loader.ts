@@ -5,9 +5,8 @@ export let error = false;
 
 //! DEFINITION OF DATA TYPES AND INTERFACES
 
-type Ctx2D = CanvasRenderingContext2D;
 
-interface RendererProps { // "props" means "properties".
+export interface RendererProps { // "props" means "properties".
     v: HTMLImageElement | HTMLCanvasElement,
     /**
      * The natural width of the sprite's image.
@@ -19,21 +18,15 @@ interface RendererProps { // "props" means "properties".
     readonly height: number,
     readonly scalable: boolean
 }
-interface ImageProps extends RendererProps {
+export interface ImageProps extends RendererProps {
     v: HTMLImageElement,
     readonly scalable: true
 }
-interface CanvasProps extends RendererProps {
+export interface CanvasProps extends RendererProps {
     v: HTMLCanvasElement,
     readonly scalable: false
 }
 
-export const gatheredAssets = {
-    images: <{[index: string]: ImageProps}> {},
-    files: <{[index: string]: string}> {},
-    
-    subcanvasImages: <{[index: string]: CanvasProps}> {}
-};
 
 export interface HitboxParameters {
     /**
@@ -61,12 +54,14 @@ export interface MaskParameters extends HitboxParameters {
     matrix: Uint8Array
 }
 
+
 export interface ResourcesToLoad {
     images?: {[index: string]: string},
     audio?: {[index: string]: string},
     fonts?: {[index: string]: string[]},
     files?: {[index: string]: string},
 
+    masks: ReadonlyArray<string>;
     subcanvasImagesBlacklist: ReadonlyArray<string>;
 
     audioVolumeNodes?: string[]
@@ -94,6 +89,14 @@ interface FileResource {
     name: string,
     v: string
 }
+export const gatheredAssets = {
+    images: <{[index: string]: ImageProps}> {},
+    files: <{[index: string]: string}> {},
+    masks: <{[index: string]: MaskParameters}> {},
+    
+    subcanvasImages: <{[index: string]: CanvasProps}> {}
+};
+
 
 export async function loadAssets(resourcesToLoad: ResourcesToLoad){
     const resourcesToLoadA: Source[] = [];

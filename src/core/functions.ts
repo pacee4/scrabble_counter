@@ -107,3 +107,11 @@ export function sklonenieNoun(number: number, singular: string, dual: string, pl
         : plural
     );
 }
+
+
+export function createCanvas(width: number, height: number) {
+    const subcanvas = document.createElement("canvas");
+    subcanvas.width = Math.ceil(width);
+    subcanvas.height = Math.ceil(height);
+    return subcanvas;
+}
