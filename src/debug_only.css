@@ -26,6 +26,8 @@
     cursor: pointer;
 }
 
+/*
 #g-divCanvasElements :not(.g-transparent):not(input):not(textarea) {
     background-color: #00800080;
 }
+*/

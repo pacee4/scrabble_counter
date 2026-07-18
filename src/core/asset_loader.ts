@@ -1,5 +1,7 @@
 import { soundManager } from '@/core/sound_manager';
 import { showEl, hideEl } from '@/dom';
+import { imageToSubcanvas } from './functions';
+import { m } from './sensing_properties';
 
 export let error = false;
 
@@ -32,11 +34,11 @@ export interface HitboxParameters {
     /**
      * The offset by X from the sprite's anchor point.
      */
-    offsetX: number,
+    x: number,
     /**
      * The offset by Y from the sprite's anchor point.
      */
-    offsetY: number,
+    y: number,
     /**
      * The width of the hitbox.
      */
@@ -49,6 +51,7 @@ export interface HitboxParameters {
 export interface MaskParameters extends HitboxParameters {
     matrix: Uint8Array
 }
+
 
 
 export interface ResourcesToLoad {
@@ -183,7 +186,14 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
         }
         function promiseFont(name: string, url: string): Promise<FontResource> {
             return new Promise((resolve, reject) => {
-                const font = new FontFace(name, `url(${url})`);
+
+                // auto detect weight and style based on the file url
+                const weight = url.includes("bold") ? "bold" : "normal";
+                const style = url.includes("italic") ? "italic" : "normal";
+
+                const font = new FontFace(name, `url(${url})`, {
+                    weight: weight, style: style
+                });
 
                 font.load()
                 .then(loadedFont => {
@@ -219,7 +229,26 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
                     type: "audio",
                     name: name,
                     v: soundBuffer
+                };
+            }
+            catch(error) {
+                displayError(url);
+                throw error;
+            }
+        }
+        async function promiseFile(name: string, url: string): Promise<FileResource> {
+            try{
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`${url}: ${response.status} ${response.statusText}`);
                 }
+                const text = await response.text();
+                updateProgressBar();
+                return {
+                    type: "file",
+                    name: name,
+                    v: text
+                };
             }
             catch(error) {
                 displayError(url);
@@ -238,6 +267,9 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
             if (source.type === "audio" && soundManager.audioCtx) {
                 promises.push(promiseAudio(source.name, source.source));
             }
+            if (source.type === "file") {
+                promises.push(promiseFile(source.name, source.source));
+            }
         }
         return promises;
     }
@@ -251,6 +283,9 @@ export async function loadAssets(resourcesToLoad: ResourcesToLoad){
         }
         if (resource.type === "audio") {
             soundManager.audio[resource.name] = resource.v;
+        }
+        if (resource.type === "file") {
+            gatheredAssets.files[resource.name] = resource.v;
         }
     }
 }
@@ -268,3 +303,23 @@ export function displayError(reason: string) {
         elProgressBarError.textContent = reason;
     }
 }
+
+/** Registers an image as an asset key on the fly. */
+export function registerImageKey(name: string, image: HTMLImageElement, noCanvas=false) {
+    const imageProp: ImageProps = {
+        v: image,
+        width: image.naturalWidth,
+        height: image.naturalWidth,
+        scalable: true
+    };
+    gatheredAssets.images[name] = imageProp;
+    
+    if (noCanvas) return;
+    gatheredAssets.subcanvasImages[name] = {
+        v: imageToSubcanvas(imageProp.v, m.realScale),
+        width: imageProp.width,
+        height: imageProp.height,
+        scalable: false
+    };
+}
+

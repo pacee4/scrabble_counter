@@ -106,7 +106,7 @@ body {
 #g-divCanvas > *{
     position: absolute;
 }
-#g-divCanvas > #g-divCanvasElements {
+#g-divCanvasElements {
     transform-origin: left top;
     width: 100%;
     height: 100%;
@@ -116,13 +116,23 @@ body {
     position: absolute;
     color: black;
 }
-/* DEBUG: */
-#g-divCanvasElements :not(.transparent):not(input):not(textarea) {
-    background-color: #008000;
-}
 
 #g-divCanvasPositioning.js-input-scrollable #g-divCanvas {
     touch-action: pan-y;
+}
+
+/* NEW */
+/* Disable selection when the pointer is on the canvas */
+#g-divCanvas {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+/* Enable selection for HTML elements inside the canvas */
+#g-divCanvasElements > * {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
 }
 
 /*#endregion*/

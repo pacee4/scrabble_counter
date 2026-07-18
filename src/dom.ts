@@ -21,8 +21,9 @@ interface ElProperties {
     text?: string,
     class?: string,
     id?: string,
-    style?: Record<string, string>|string;
-    children?: (Node|string)[]
+    style?: Record<string, string>|string,
+    children?: (Node|string)[],
+    role?: string
 }
 export function createEl(tag: keyof HTMLElementTagNameMap, p: ElProperties): HTMLElement {
     const el = document.createElement(tag);
@@ -46,9 +47,13 @@ export function createEl(tag: keyof HTMLElementTagNameMap, p: ElProperties): HTM
             }
         }
     }
+    if (p.role) {
+        el.role = p.role;
+    }
     if (p.children) {
         el.append(...p.children);
     }
+    
 
     return el;
 }
@@ -234,13 +239,13 @@ class Modal {
         
         const pastDateN = {
             year: parseInt(parts[0]),
-            /** Здесь январь - это нулевой месяц, как допустимо в синтаксисе класса Date */
+            /** Here January is denoted as 0 */
             month: (parts.length >= 2) ? parseInt(parts[1])-1 : 0,
             day: (parts.length >= 3) ? parseInt(parts[2]) : 1,
             priority: parts.length-1
         };
         
-        // Получение сегодняшней даты
+        // Get today's date
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -248,7 +253,7 @@ class Modal {
         let months = (today.getMonth() - pastDateN.month);
         let days = (today.getDate() - pastDateN.day);
 
-        // Коррекция периода
+        // Transition correction
         if (days < 0) {
             months--;
             const previousMonth = new Date(today.getFullYear(), today.getMonth(), 0);
@@ -308,9 +313,8 @@ class Modal {
         const formattedEl = document.createElement("p");
         formattedEl.classList.add("pre-line");
         
-        // Сгенерировано ИИ //
+        // AI GENERATED //
 
-        // 1. Регулярное выражение ищет жирный текст, курсив и ссылки [текст](ссылка), игнорируя экранированные символы
         const regex = /(?<!\\)(\*\*.*?(?<!\\)\*\*|(?<!\\)\*.*?(?<!\\)\*|(?<!\\)\[.*?(?<!\\)\]\((?<!\\).*?(?<!\\)\))/g;
         const tokens = text.split(regex);
 
@@ -325,11 +329,9 @@ class Modal {
                 italicElement.textContent = token.slice(1, -1).replace(/\\([\*\*\[\]\(\)])/g, '$1');
                 formattedEl.appendChild(italicElement);
             } 
-            // 2. Обработка ссылок [текст](ссылка)
             else if (token.startsWith('[') && token.endsWith(')')) {
                 const linkElement = document.createElement('a');
                 
-                // Разделяем текст ссылки и URL по последней закрывающей квадратной скобке и открывающей круглой
                 const match = token.match(/^\[(.*?(?<!\\))\]\((.*?(?<!\\))\)$/);
                 
                 if (match) {
@@ -339,19 +341,16 @@ class Modal {
                     linkElement.textContent = linkText.replace(/\\([\*\*\[\]\(\)])/g, '$1');
                     linkElement.href = linkUrl.replace(/\\([\*\*\[\]\(\)])/g, '$1');
                     
-                    // Опционально: открывать в новой вкладке внешние ссылки
                     linkElement.target = '_blank';
                     linkElement.rel = 'noopener noreferrer';
                     
                     formattedEl.appendChild(linkElement);
                 } else {
-                    // Если структура нарушена, выводим как обычный текст
                     const cleanText = token.replace(/\\([\*\*\[\]\(\)])/g, '$1');
                     formattedEl.appendChild(document.createTextNode(cleanText));
                 }
             }
             else if (token) {
-                // Очищаем обычный текст от любых экранирующих слэшей для спецсимволов
                 const cleanText = token.replace(/\\([\*\*\[\]\(\)])/g, '$1');
                 formattedEl.appendChild(document.createTextNode(cleanText));
             }
@@ -368,17 +367,17 @@ class Modal {
     }
 
     fetchInfo(url: string) {
-        fetch(url) // изменить на "/games/game_directory.json"
+        fetch(url)
         .then((response)=>{
             if (!response.ok) throw new Error(`Cannot load file: ${response.url}`);
             return (response.json() as Promise<Array<GameDirectoryEntry>>);
         })
         .then((json)=>{
-            // когда JSON-файл успешно загружен
+            // when a JSON file has successfully loaded
             const entry = json.find((entry)=>(entry.name.toLowerCase() === document.title.toLowerCase()))
             if (!entry) throw new Error(`No match with the title: ${document.title}`);
             
-            // когда получена информация по заголовку
+            // when the info is received by the title
             this.placeInfo(entry);
         })
         .catch((error)=>{
@@ -392,7 +391,7 @@ class Modal {
         const f = document.createDocumentFragment();
 
         // categories
-        {
+        if (!settings.IS_PROJECT) {
             f.appendChild(createEl("p", {
                 class: "info m bottom-0 bold",
                 text: "Категории:"
@@ -463,9 +462,12 @@ class Modal {
         }
         
         // description
-        this.buildSectionBlock(f, "Описание игры", entry.details?.description);
+        this.buildSectionBlock(f, (settings.IS_PROJECT) ? "Описание" : "Описание игры", entry.details?.description);
+
         // how_to_play
-        this.buildSectionBlock(f, "Как играть", entry.details?.how_to_play);
+        if (!settings.IS_PROJECT) {
+            this.buildSectionBlock(f, "Как играть", entry.details?.how_to_play);
+        }
         // credits
         this.buildSectionBlock(f, "Благодарность", entry.details?.credits);
 
@@ -473,51 +475,53 @@ class Modal {
     }
 
     constructor() {
+        if (!settings.IS_PROJECT) {
+            document.getElementById("g-mwAQuit")!.textContent = "Выйти из игры";
+        }
+
         document.getElementById("g-mwName")!.textContent = document.title;
 
-        // Добавить обработчики событий
+        // Add event listeners
 
-        // кнопка "Информация"
         document.getElementById("g-bInfo")!.addEventListener("click", ()=>{
             this.open();
         });
 
-        // кнопка "Закрыть"
         document.getElementById("g-mwAClose")!.addEventListener("click", ()=>{
             this.close();
         });
 
-        // если пользователь нажал на затемнённое место, закрыть модальное окно
+        // If the user has clicked on the overlay, close the modal window
         this.els.modal.addEventListener("click", (event)=>{
             if ((event.target as HTMLElement).classList.contains("js-closeModal")) {
                 this.close();
             }
         });
 
-        // если пользователь нажал клавишу "Esc", закрыть модальное окно
+        // If the user has pressed Esc, close the modal window
         document.addEventListener("keydown", (event)=>{
             if (!this.els.modal.classList.contains("hide") && event.key === "Escape") {
                 this.close();
             }
         });
 
-        // если пользователь нажал в браузере кнопку «Назад», закрыть модальное окно
+        // If the user tapped on the Back button, close the modal window
         window.addEventListener("popstate", ()=>{
             this.closeModalP();
         });
 
-        // обновление прокрутки
+        // update scroll gradients
         this.els.modalInnerContent.addEventListener("scroll", this.updateScrollGradients.bind(this));
     }
 
     open() {
         showEl(this.els.modal);
 
-        // обнулить позицию прокрутки в содержимом модального окна
+        // reset scrolling position in the modal window content
         this.els.modalInnerContent.scrollTop = 0;
         this.els.modalInnerContent.classList.add("js-atTop");
 
-        // Добавляем запись в историю браузера
+        // add the history state
         const state: CustomHistoryState = {modalOpen: true};
         window.history.pushState(state, "");
 
@@ -525,7 +529,7 @@ class Modal {
         UI.updateGameFocus();
     }
     close() {
-        // Получаем запись из истории браузера
+        // obatin the state from history
         return new Promise<void>((resolve)=>{
             const currentState = history.state as CustomHistoryState|null;
             if (currentState?.modalOpen) {
@@ -535,7 +539,7 @@ class Modal {
                 }, {once: true});
                 history.back();
             }
-            // Закрываем модальное окно
+            // close the modal window
             else {
                 this.closeModalP();
                 UI.updateGameFocus();
@@ -654,7 +658,7 @@ export class UI {
     static setGameEvents() {
         this.fullscreenDialog.setEvents();
 
-        // Проверка страницы на видимость
+        // Check the page for visibility
         if (PageVisibilityPolyfill.isSupported) {
             document.addEventListener(PageVisibilityPolyfill.event, ()=>{
                 if (PageVisibilityPolyfill.hidden) {

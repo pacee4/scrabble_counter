@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="412"
+   height="118"
+   viewBox="0 0 412 118"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs1" /><g
+     id="layer7"
+     style="display:inline"
+     transform="translate(-14,-224)"><g
+       id="g25"
+       style="display:inline"><g
+         id="g30"
+         style="display:inline"><path
+           id="rect35"
+           style="display:inline;fill:#b8c9c0;fill-opacity:1;stroke-width:4;stroke-linecap:round;stroke-linejoin:round"
+           d="m 41,226 h 358 c 13.85,0 25,11.15 25,25 v 64 c 0,13.85 -11.15,25 -25,25 H 41 C 27.15,340 16,328.85 16,315 v -64 c 0,-13.85 11.15,-25 25,-25 z" /><path
+           d="M 154.5,226 H 41 c -13.85,0 -25,11.15 -25,25 v 9 h 170.5 z"
+           style="display:inline;fill:#7b5ef6;fill-opacity:1;stroke-width:31.9265;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:0.700599"
+           id="path41" /><g
+           id="g39"
+           style="display:inline"><path
+             d="M 424,260 H 16 v 55 c 0,13.85 11.15,25 25,25 h 358 c 13.85,0 25,-11.15 25,-25 z"
+             style="display:inline;fill:#c5a1ff;fill-opacity:1;stroke-width:4;stroke-linecap:round;stroke-linejoin:round"
+             id="path37" /><path
+             d="m 16,258 v 57 c 0,13.85 11.15,25 25,25 h 358 c 13.85,0 25,-11.15 25,-25 v -57 z m 6,4 h 396 v 53 c 0,10.62978 -8.37022,19 -19,19 H 41 c -10.629783,0 -19,-8.37022 -19,-19 z"
+             style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;fill:#7b5ef6;fill-opacity:1;stroke-linecap:round;stroke-linejoin:round;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+             id="path39" /></g><path
+           id="rect34"
+           style="display:inline;fill:none;stroke:#000000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round"
+           d="m 41,226 h 358 c 13.85,0 25,11.15 25,25 v 64 c 0,13.85 -11.15,25 -25,25 H 41 C 27.15,340 16,328.85 16,315 v -64 c 0,-13.85 11.15,-25 25,-25 z" /></g></g></g></svg>

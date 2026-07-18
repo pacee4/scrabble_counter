@@ -23,22 +23,20 @@ export class Sprite {
     y: number;
 
     /**
-     * The natural width of the sprite's image.
+     * The natural width of the sprite's image or explicitly defined width of the sprite.
      */
     width = 0;
     /**
-     * The natural height of the sprite's image.
+     * The natural height of the sprite's image or explicitly defined height of the sprite.
      */
     height = 0;
-    /**
-     * Defined using `gatheredAssets.images[key]` or `gatheredAssets.subcanvasImages[key]`
-     */
-    image!: RendererProps | null;
+    imageKey = "";
+    private image!: RendererProps | null;
 
     /**
-     * The anchor point relative to the sprite's top-left corner for position and transformation.
+     * The absolute anchor point in pixels relative to the sprite's top-left corner for position and transformation.
      */
-    anchor = {x: 0, y: 0};
+    absoluteAnchor: Point = {x: 0, y: 0};
 
     /**
      * Determines whether the sprite should be displayed on the screen.
@@ -48,7 +46,8 @@ export class Sprite {
     new = true;
     layer = 0;
 
-    scale = {x: 1, y: 1};
+
+    scale: Point = {x: 1, y: 1};
     rotation = 0;
     opacity = 1;
 
@@ -63,9 +62,22 @@ export class Sprite {
     /**
      * Sets or changes the sprite's image, and assigns it a width and height.
      */
-    setImage(image: RendererProps | null){
-        this.image = image;
-        if (this.image!==null) {
+    setImageKey(key: string, noCanvas=false){
+        if (gatheredAssets.subcanvasImages[key] && !noCanvas) {
+            this.image = gatheredAssets.subcanvasImages[key];
+        }
+        else if (gatheredAssets.images[key]) {
+            this.image = gatheredAssets.images[key];
+        }
+        else {
+            if (key!=="") {
+                console.warn(`Cannot find the image key: ${key}`);
+            }
+            this.image = null;
+        }
+        this.imageKey = key;
+
+        if (this.image) {
             this.width = this.image.width;
             this.height = this.image.height;
         }
@@ -74,22 +86,31 @@ export class Sprite {
             this.height = 0;
         }
     }
+
+    setImageKeyTick(key: string){
+        if (key!==this.imageKey) {
+            this.setImageKey(key);
+        }
+    }
     
     /**
      * Sets the sprite's anchor point for position, rotation and scaling based on its original width and height factor.
+     * 
+     * After resizing the sprite, you have to call this method manually to maintain the correct anchor point.
+     * 
      * @param cx Ranges from 0 to 1 from the left edge to the right.
      * @param cy Ranges from 0 to 1 from the top edge to the bottom.
      */
     setAnchorPoint(cx=0, cy=0){
-        this.anchor.x = Math.round(this.width*cx);
-        this.anchor.y = Math.round(this.height*cy);
+        this.absoluteAnchor.x = this.width*cx;
+        this.absoluteAnchor.y = this.height*cy;
     }
     /**
      * Sets the sprite's anchor point for position, rotation and scaling based on its top-left corner offset.
      */
     setAbsoluteAnchorPoint(x=0, y=0){
-        this.anchor.x = x;
-        this.anchor.y = y;
+        this.absoluteAnchor.x = x;
+        this.absoluteAnchor.y = y;
     }
 
     goTo(x: number, y: number) {
@@ -106,22 +127,32 @@ export class Sprite {
         this.scale.y = factor;
     }
 
-    /**
-     * @param image Defined using `gatheredAssets.images[key]` or `gatheredAssets.subcanvasImages[key]`
-     */
-    constructor(x=0, y=0, image: RendererProps | null = null) {
-        this.setImage(image);
+    constructor(x=0, y=0, imageKey="") {
+        this.setImageKey(imageKey);
         this.x = x;
         this.y = y;
         this.setAnchorPoint();
     }
     
+    /**
+     * Handles the message process.
+     * @example 
+     * ```
+     * messageStep(message: Msg, s: SpriteStorage): void {
+     *     switch (message) {
+     *         case Msg.TICK:
+     *             ...
+     *             break;
+     *     }
+     * }
+     * ```
+     */
     messageStep(message: Msg) {}
     
 
     drawPosition(ctx: Ctx2D) {
-        const drawingX = sf(this.x-this.anchor.x);
-        const drawingY = sf(this.y-this.anchor.y);
+        const drawingX = sf(this.x-this.absoluteAnchor.x);
+        const drawingY = sf(this.y-this.absoluteAnchor.y);
         if (this.realPositioning) {
             ctx.translate(drawingX, drawingY);
         }
@@ -133,8 +164,8 @@ export class Sprite {
     drawTransformation(ctx: CanvasRenderingContext2D){
         const {x: sx, y: sy} = this.scale;
         const rot = this.rotation;
-        const ax = sf(this.anchor.x);
-        const ay = sf(this.anchor.y);
+        const ax = sf(this.absoluteAnchor.x);
+        const ay = sf(this.absoluteAnchor.y);
 
         if ((sx !== 1 || sy !== 1 || rot !== 0)) {
             ctx.translate(ax, ay);
@@ -163,6 +194,12 @@ export class Sprite {
         }
     }
 
+    /** 
+     * Order of execution:
+     * ```
+     * this.drawSelf(ctx);
+     * ```
+     */
     drawResult(ctx: Ctx2D) {/*default*/
         this.drawSelf(ctx);
     }
@@ -171,15 +208,59 @@ export class Sprite {
      * 
      * Order of execution:
      * ```
-     * this.drawPosition(ctx)
-     * this.drawTransformation(ctx)
-     * this.drawResult(ctx)
+     * this.drawPosition(ctx);
+     * this.drawTransformation(ctx);
+     * this.drawResult(ctx);
      * ```
      */
     draw(ctx: Ctx2D) {
         this.drawPosition(ctx);
         this.drawTransformation(ctx);
         this.drawResult(ctx);
+    }
+}
+
+export class Collection<T extends Sprite = Sprite> {
+    array: T[] = [];
+
+    constructor(...sprites: T[]) {
+        this.addMultiple(...sprites);
+    }
+
+    add(sprite: T) {
+        this.array.push(sprite);
+        return sprite;
+    }
+    addOne(sprite: T) {
+        if (this.array.length===0) {
+            return this.add(sprite);
+        }
+    }
+    addMultiple(...sprites: T[]) {
+        for (const sprite of sprites) {
+            this.array.push(sprite);
+        }
+    }
+    clear() {
+        this.array.forEach((sprite) => {
+            sprite.delete = true;
+        });
+    }
+}
+export class AutoCollection<T extends Sprite, Args extends any[] = []> extends Collection<T> {
+    constructor(private factory: (...args: Args)=>T) {
+        super();
+    }
+
+    instantiate(...args: Args) {
+        const obj = this.factory(...args);
+        this.array.push(obj);
+        return obj;
+    }
+    instantiateOne(...args: Args) {
+        if (this.array.length===0) {
+            return this.instantiate(...args);
+        }
     }
 }
 
@@ -231,12 +312,12 @@ export class CompHitbox extends ACompCollidable {
     }
 
     calculateOriginPoint() {
-        this.offsetX = -this.sourceSprite.anchor.x;
-        this.offsetY = -this.sourceSprite.anchor.y;
+        this.offsetX = -this.sourceSprite.absoluteAnchor.x;
+        this.offsetY = -this.sourceSprite.absoluteAnchor.y;
     }
     setHitbox(hitbox: HitboxParameters) {
-        this.offsetX = hitbox.offsetX;
-        this.offsetY = hitbox.offsetY;
+        this.offsetX = hitbox.x;
+        this.offsetY = hitbox.y;
         this.width = hitbox.width;
         this.height = hitbox.height;
     }
@@ -294,6 +375,10 @@ export class CompMask extends CompHitbox {
         super(sourceObject, mask, affectScale);
 
         this.matrix = mask.matrix;
+
+        if (mask.x === 0 && mask.y === 0) {
+            this.calculateOriginPoint();
+        }
     }
 
     collidePoint(x: number, y: number, affectRotation=false): boolean {

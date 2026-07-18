@@ -3,7 +3,7 @@ import { displayError } from '@/core/asset_loader';
 import { screen } from '@/screen';
 import { UI } from '@/dom';
 
-// АСИНХРОННАЯ ИНИЦИАЛИЗАЦИЯ ПРОЕКТА
+// ASYNCHRONOUS INITIALIZATION OF THE PROJECT
 if (!window.loadingError) {
     screen.init(getResourcesToLoad())
     .then(()=>{
@@ -16,5 +16,5 @@ if (!window.loadingError) {
     });
 }
 
-// ЗАГРУЗКА ИНФОРМАЦИИ
+// LOAD THE PROJECT INFORMATION
 UI.modal.fetchInfo(import.meta.env.DEV ? "./project_directory.json" : "/project/game_directory.json");

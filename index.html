@@ -2,13 +2,15 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="/favicon.png">
+    <!--<link rel="icon" type="image/png" href="/favicon.png">-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
 
-    <title>Пустой проект</title>
+    <title>Подсчёт очков в Эрудите</title>
     <link rel="stylesheet" href="./src/styles.css">
+    
+    <link rel="stylesheet" href="./src/editable/g-divCanvasElements.css">
 
-    <!-- Загрузить шрифты из Google Fonts -->
+    <!-- Load Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Noto+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
@@ -20,8 +22,86 @@
             <div id="g-divCanvasPositioning" class="g-flex g-center g-extend">
                 <div id="g-divCanvas">
                     <!-- (EDITABLE) -->
-                    <div id="g-divCanvasElements" class="hide transparent">
+                    <div id="g-divCanvasElements" role="presentation" class="transparent">
+                        <!-- Templates -->
+                        <!--#region-->
+                        <template id="templatePlayerInput">
+                            <div class="instance" data-index>
+                                <input class="bText" type="text" maxlength="20">
+                                <div class="small-buttons flex column">
+                                    <button class="bUp"><img src="./assets/html_used/up.svg" alt=""></button>
+                                    <button class="bDown"><img src="./assets/html_used/down.svg" alt=""></button>
+                                </div>
+                                <button class="bRemove"><img src="./assets/html_used/remove.svg" alt=""></button>
+                            </div>
+                        </template>
+                        <template id="templateWordListItem">
+                            <li class="clickable">
+                                <div class="word"></div>
+                                <div class="points"></div>
+                            </li>
+                        </template>
+                        <template id="templatePlayerScoreItem">
+                            <li>
+                                <div class="player-name"></div>
+                                <div class="score"></div>
+                            </li>
+                        </template>
+                        <!--#endregion-->
 
+
+                        <div id="playersPos" class="flex column  hide">
+                            <div class="term">
+                                Игроки: <span style="color: #87ece7;">от 2 до 4</span>
+                            </div>
+
+                            <div class="player-list  flex column">
+                                <div class="player-input-list  flex column"></div>
+                                <div class="instance  add-button">
+                                    <button class="bAdd"><img src="./assets/html_used/add.svg" alt=""></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="timerTermPos" class="flex column  hide">
+                            <div class="term">
+                                Таймер хода:
+                            </div>
+                        </div>
+
+                        <div id="timerPos" class="js-isBig  hide">
+                            <div id="setTimer" class="f-center  flex">
+                                <input id="timerInputM" type="number" min="0" max="99" value="0">
+                                <span>:</span>
+                                <input id="timerInputS" type="number" min="-1" value="0">
+                            </div>
+                        </div>
+
+                        <div id="tablePos" role="table" class="scrollable  hide">
+                            <!-- Dynamic addition using JS -->
+                            <div class="header">
+                                <div class="row" role="row">
+                                </div>
+                            </div>
+                            <div class="body  scrollable">
+                            </div>
+                            <div class="footer">
+                                <div class="row" role="row">
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul id="wordListPos" class="scrollable  hide">
+                            <!-- Dynamic addition using JS -->
+                        </ul>
+
+                        <div id="helpPos" class="hide">
+                            <!-- Dynamic addition using JS -->
+                        </div>
+
+                        <ul id="playerScoresPos" class="hide">
+                            <!-- Dynamic addition using JS -->
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -62,7 +142,7 @@
                 <div id="g-modalWindow" class="g-flex g-column">
 
                     <div id="g-modalInnerContent" class="mp f-extend">
-                        <h1 id="g-mwName">Пустой проект</h1>
+                        <h1 id="g-mwName">Подсчёт очков в Эрудите</h1>
                         <div id="g-modalDivContent">
                             <p class="m bottom-4"></p>
                         </div>
@@ -82,7 +162,7 @@
     </div>
     <script>
         window.loadingError = false;
-        if (!(window.location.protocol === "file:" || window.location.origin == "null")) {
+        if (!(window.location.protocol === "file:" || String(window.location.origin) === "null")) {
             
             document.querySelector("#g-modalDivContent > p").textContent = "Загрузка информации...";
             document.getElementById("g-progressBarText").textContent = "Загрузка... 0%";
@@ -115,7 +195,7 @@
                     if (event.reason && String(event.reason).includes("dynamically imported module")) {
                         window.loadingEventListeners.displayError("Перезагрузите страницу.");
 
-                        // Перезагрузка в обход кэша GitHub Pages
+                        // Reload and clear the page cache
                         const elButton = document.createElement("button");
                         elButton.classList.add("reloadButton");
                         elButton.textContent = "Перезагрузить";
@@ -134,7 +214,7 @@
                     }
                 }
             };
-            // Самоуничтожается, когда проект полностью загружен
+            // Self-destroyed, when the code has fully loaded
             window.removeLoadingEventListeners = function() {
                 window.removeEventListener("error", window.loadingEventListeners.unableToLoadModule1, true);
                 window.onerror = null;
@@ -143,12 +223,12 @@
                 window.loadingEventListeners = null;
             };
 
-            // Если не удалось загрузить модуль
+            // If module failed to load
             window.addEventListener("error", window.loadingEventListeners.unableToLoadModule1, true);
             window.onerror = window.loadingEventListeners.unableToLoadModule2;   
             window.addEventListener("unhandledrejection", window.loadingEventListeners.promptToReloadPage);
 
-            // Проверка браузера на стандарт es2020 и необходимые API
+            // Check for ES2020 standard
             (function() {
                 const remarks = [];
 

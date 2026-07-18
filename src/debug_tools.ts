@@ -10,21 +10,25 @@ export class DebugTools {
         keyboard: createEl("code", {}),
         viewportSize: createEl("code", {}),
         viewportOffset: createEl("code", {}),
+        startSecs: createEl("code", {}),
         customValue: createEl("code", {style: {"color": "yellow"}}),
         bPause: createEl("button", {text: "Pause"}),
-        bLogMessages: createEl("button", {text: "Log messages"})
+        bLogMessages: createEl("button", {text: "Log messages"}),
+        bShowBounds: createEl("button", {text: "Show subcanvas bounds"}),
     };
 
     private ms = 0;
     private fps = 0;
     private fpsCount = 0;
 
-    customValue: any = 0;
+    private customValue: any = 0;
     private customValueH: any = "update";
 
     paused = false;
     logMessages = false;
     calledMessages: string[] = [];
+
+    showBounds = false;
 
     isShown() {
         return !this.divO.classList.contains("hide");
@@ -48,7 +52,7 @@ export class DebugTools {
 
             divDebugPanel.appendChild(this.divO);
 
-            // обработчики событий
+            // event listeners
             bDebug.addEventListener("click", ()=>{
                 this.divO.classList.toggle("hide");
             })
@@ -74,6 +78,16 @@ export class DebugTools {
                     this.o.bLogMessages.style.backgroundColor = "#f0f0f0";
                 }
             });
+
+            this.o.bShowBounds.addEventListener("mousedown", ()=>{
+                this.showBounds = !this.showBounds;
+                if (this.showBounds) {
+                    this.o.bShowBounds.style.backgroundColor = "#00ff00";
+                }
+                else {
+                    this.o.bShowBounds.style.backgroundColor = "#f0f0f0";
+                }
+            });
         });
     }
 
@@ -92,6 +106,7 @@ export class DebugTools {
         this.o.keyboard.innerText = `Keyboard: ${(Array.from(this.m.keyboardCodes.entries())).map((e)=>(`${e[0]} "${e[1].character}"`)).join("; ")}`;
         this.o.viewportSize.innerText = `Viewport Size: ${window.innerWidth}x${window.innerHeight}`;
         this.o.viewportOffset.innerText = `Viewport Offset: ${window.scrollX}x${window.scrollY}`;
+        this.o.startSecs.innerText = `Load Time: ${(this.m.loadTimeMs/1000).toFixed(3)}s`;
         
         if (this.customValue !== this.customValueH) {
             this.customValueH = this.customValue;

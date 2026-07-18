@@ -1,4 +1,4 @@
-import { clamp, createCanvas } from "./core/functions";
+import { clamp, createCanvas, imageToSubcanvas } from "./core/functions";
 import { soundManager } from "@/core/sound_manager";
 
 import { Msg } from "@/editable/msg";
@@ -68,8 +68,8 @@ class MaskCreator {
 
         this.ctxM.clearRect(0, 0, this.canvas.width, this.canvas.height);
         return {
-            offsetX: 0,
-            offsetY: 0,
+            x: 0,
+            y: 0,
             width: width,
             height: height,
             matrix: matrix
@@ -84,6 +84,7 @@ class Screen {
     private s!: SpriteStorage;
 
     private lastFrameMs = 0;
+    private firstTickPassed = false;
 
     private readonly LOGICAL_WIDTH = settings.SCREEN_WIDTH;
     private readonly LOGICAL_HEIGHT = settings.SCREEN_HEIGHT;
@@ -105,7 +106,7 @@ class Screen {
             }
             const imageProp = gatheredAssets.images[imageName];
             gatheredAssets.subcanvasImages[imageName] = {
-                v: this.imageToSubcanvas(imageProp.v),
+                v: <any>null, // soon will have an image when calling `this.onResize()` and before initializing sprite storage
                 width: imageProp.width,
                 height: imageProp.height,
                 scalable: false
@@ -127,38 +128,51 @@ class Screen {
         }
 
         // obtain volume nodes
-        if (resourcesToLoad.audioVolumeNodes && soundManager.audioCtx) {
+        if (soundManager.audioCtx) {
             soundManager.volumeNodes.set("general", soundManager.audioCtx.createGain());
-            for (let volumeNode of resourcesToLoad.audioVolumeNodes) {
-                soundManager.volumeNodes.set(volumeNode, soundManager.audioCtx.createGain());
+
+            if (resourcesToLoad.audioVolumeNodes) {
+                for (let volumeNode of resourcesToLoad.audioVolumeNodes) {
+                    soundManager.volumeNodes.set(volumeNode, soundManager.audioCtx.createGain());
+                }
             }
-        }
-
-        // create the sprite storage
-        this.s = new SpriteStorage();
-        this.s.takeNewFromSprites();
-
+        }    
 
         this.setEventListeners();
         // set width and height of #divCanvasElements
         els.divCanvasElements.style.width = `${this.LOGICAL_WIDTH}px`;
         els.divCanvasElements.style.height =`${this.LOGICAL_HEIGHT}px`;
+        
+        this.onResize();
+        m.resolutionHasChanged = false;
+
+
+        // create the sprite storage and immediately create persistent sprites
+        this.s = new SpriteStorage();
+        this.s.takeNewFromSprites();
 
         // Show game
         els.divCanvas.insertBefore(this.canvas, els.divCanvas.firstChild);
 
         document.getElementById("g-divProgressBar")!.remove(); // Delete the progress bar overlay
         showEl(els.divGame);
+
+        // calculate position of divCanvas when the canvas is shown
+        {
+            const divCanvasClientRect = els.divCanvas.getBoundingClientRect();
+            this.divCanvasPos.x = divCanvasClientRect.x;
+            this.divCanvasPos.y = divCanvasClientRect.y;
+        }
         
         // important on load
-        this.onResize();
-        messages.broadcast(Msg.START);
+        messages.broadcastQueued(Msg.START);
+        m.loadTimeMs = performance.now();
         requestAnimationFrame(this.tick);
     }
 
     private tick = (currentMs: number)=>{
         // STEP 1: measure time
-        m.time = currentMs/1000;
+        m.time = (currentMs - m.loadTimeMs)/1000;
         m.delta = (currentMs - this.lastFrameMs)/1000;
         if (m.delta > 0.5) {m.delta = 0;}
         this.lastFrameMs = currentMs;
@@ -169,8 +183,18 @@ class Screen {
         try {
             if ((!window.debugTools) || (!window.debugTools.paused)) {
                 // STEP 2: handle the logic of objects
-                messages.broadcast(Msg.TICK);
+                if (this.firstTickPassed) {
+                    messages.broadcastQueued(Msg.TICK);
+                }
+                else {
+                    this.firstTickPassed = true;
+                }
                 this.s.updateSprites();
+                messages.broadcastQueued(Msg.TICK_AFTER);
+                this.s.updateSprites();
+
+                this.s.handleDeletionOfSprites();
+                this.s.takeNewFromSprites();
 
                 // STEP 3: draw
                 // clear canvas
@@ -179,6 +203,17 @@ class Screen {
                 this.s.drawSprites(this.ctx);
 
                 // pass tick
+                for (let value of m.keyboardCodes.values()) {
+                    if (!value.holding) {
+                        value.holding = true;
+                    }
+                }
+                for (let value of m.pointers.values()) {
+                    if (!value.holding) {
+                        value.holding = true;
+                    }
+                }
+
                 if (m.resolutionHasChanged) {m.resolutionHasChanged = false;}
                 if (window.debugTools && window.debugTools.logMessages) {
                     console.log(`Messages: ${window.debugTools.calledMessages.map(msg=>msg.toString()).join(", ")}`);
@@ -200,8 +235,8 @@ class Screen {
     //#region
     private getPointerPos(event: PointerEvent) {
         return {
-            x: clamp(((event.clientX-this.divCanvasPos.x) / m.realScale), 0, this.LOGICAL_WIDTH),
-            y: clamp(((event.clientY-this.divCanvasPos.y) / m.realScale), 0, this.LOGICAL_HEIGHT)
+            x: clamp(((event.clientX-this.divCanvasPos.x) / m.realScale * m.dp), 0, this.LOGICAL_WIDTH),
+            y: clamp(((event.clientY-this.divCanvasPos.y) / m.realScale * m.dp), 0, this.LOGICAL_HEIGHT)
         };
     }
     private deleteVirtualId(event: PointerEvent) {
@@ -336,10 +371,10 @@ class Screen {
         els.divCanvas.addEventListener("pointerup", this.deleteVirtualId.bind(this));
         els.divCanvas.addEventListener("pointercancel", this.deleteVirtualId.bind(this));
         
-        els.divCanvas.addEventListener("pointerenter", (event)=>{
+        els.divCanvas.addEventListener("pointerenter", (event: PointerEvent)=>{
             m.hoveredPointerCount+=1;
         })
-        els.divCanvas.addEventListener("pointerleave", (event)=>{
+        els.divCanvas.addEventListener("pointerleave", (event: PointerEvent)=>{
             m.hoveredPointerCount-=1;
             if (event.pointerType === "mouse") {
                 this.deleteVirtualId(event);
@@ -392,8 +427,8 @@ class Screen {
     //#endregion
 
     private onResize() {
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
+        const screenWidth = window.innerWidth * m.dp;
+        const screenHeight = window.innerHeight * m.dp;
 
         // calculate realScale
         const newRealScale = Math.min(screenWidth / this.LOGICAL_WIDTH, screenHeight / this.LOGICAL_HEIGHT);
@@ -432,15 +467,8 @@ class Screen {
 
     private cacheSubcanvasImages() {
         for (const imageName in gatheredAssets.subcanvasImages) {
-            gatheredAssets.subcanvasImages[imageName].v = this.imageToSubcanvas(gatheredAssets.images[imageName].v, m.realScale);
+            gatheredAssets.subcanvasImages[imageName].v = imageToSubcanvas(gatheredAssets.images[imageName].v, m.realScale);
         }
-    }
-    private imageToSubcanvas(image: HTMLImageElement, scaleFactor=1) {
-        const subcanvas = createCanvas(Math.ceil(image.naturalWidth*scaleFactor), Math.ceil(image.naturalHeight*scaleFactor));
-        const subctx = subcanvas.getContext("2d")!;
-        subctx.scale(scaleFactor, scaleFactor);
-        subctx.drawImage(image, 0, 0);
-        return subcanvas;
     }
 }
 //#endregion

@@ -1,29 +1,44 @@
 import type { Msg } from "@/editable/msg";
-import { settings } from "@/editable/settings";
 
 // MESSAGE MANAGER
 class Messages {
-    private messages: Array<Msg> = [];
-    broadcastFirst(value: Msg){
-        if(!this.messages.includes(value)){
-            this.messages.unshift(value);
-        }
-    }
+    private firstLevelMessages: Array<Msg> = [];
+    private secondLevelMessages: Array<Msg> = [];
+    /** Adds a signaling message to the second-level queue. Commonly used for broadcasting low-frequency messages. */
     broadcast(value: Msg){
-        if(!this.messages.includes(value)){
-            this.messages.push(value);
+        if(!this.secondLevelMessages.includes(value)){
+            this.secondLevelMessages.push(value);
         }
     }
-    clear() {
-        this.messages.splice(0);
+    /** Adds a signaling message to the first-level queue. Used for broadcasting tick messages. */
+    broadcastQueued(value: Msg){
+        if(!this.firstLevelMessages.includes(value)){
+            this.firstLevelMessages.push(value);
+        }
     }
-    obtain() {
-        return this.messages.shift();
+    /** Adds a signaling message to the first-level queue. Used for broadcasting tick messages. */
+    broadcastTick(value: Msg){
+        this.broadcastQueued(value);
     }
-    hasMessages() {
-        return (this.messages.length!==0);
+
+    /** @internal */
+    hasFirstLevelMessages() {
+        return (this.firstLevelMessages.length > 0);
+    }
+    /** @internal */
+    obtainFirstLevelMessage() {
+        return this.firstLevelMessages.shift()!;
+    }
+    /** @internal */
+    hasSecondLevelMessages() {
+        return (this.secondLevelMessages.length > 0);
+    }
+    /** @internal */
+    obtainSecondLevelMessage() {
+        return this.secondLevelMessages.shift()!;
     }
 }
+/** Just like in Scratch project engine, but better. */
 export const messages = new Messages();
 
 interface KeyProperty {
@@ -109,6 +124,7 @@ class SensingProperties {
         return false;
     }
 
+    loadTimeMs = -1;
     /** Total elapsed time in seconds. */
     time = 0;
     /** Difference in seconds between two frames. */

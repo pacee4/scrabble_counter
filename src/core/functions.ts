@@ -1,5 +1,3 @@
-export const SMALL = 0.000001;
-
 export function remainder(n: number, m: number) {
     return ((n % m) + m) % m;
 }
@@ -114,4 +112,28 @@ export function createCanvas(width: number, height: number) {
     subcanvas.width = Math.ceil(width);
     subcanvas.height = Math.ceil(height);
     return subcanvas;
+}
+
+export function imageToSubcanvas(image: HTMLImageElement, scaleFactor=1) {
+    const subcanvas = createCanvas(Math.ceil(image.naturalWidth*scaleFactor), Math.ceil(image.naturalHeight*scaleFactor));
+    const subctx = subcanvas.getContext("2d")!;
+    subctx.scale(scaleFactor, scaleFactor);
+    subctx.drawImage(image, 0, 0);
+    return subcanvas;
+}
+
+
+// working with time
+export function toMinsAndSecs(seconds: number) {
+    return {
+        mins: Math.floor(seconds / 60),
+        secs: Math.floor(seconds % 60)
+    };
+}
+export function toSeconds(mins: number, secs: number) {
+    return mins * 60 + secs;
+}
+
+export function sum(...terms: number[]) {
+    return terms.reduce((acc, curr) => (acc + curr), 0);
 }
