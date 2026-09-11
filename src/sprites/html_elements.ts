@@ -967,6 +967,7 @@ class PlayerScores extends AStageConstituent {
     shrinkToFitTexts() {
         for (const elItem of this.els.list.children) {
             const elPlayerName = elItem.getElementsByClassName("player-name")[0];
+            (<HTMLElement>elPlayerName).style.fontSize = "";
             C.shrinkToFit(<HTMLElement>elPlayerName);
         }
     }
@@ -1000,21 +1001,19 @@ class PlayerScores extends AStageConstituent {
         });
 
         let currentPlace = 1;
-        let previousScore = 0;
+        let previousScore = -1;
 
         elItems.forEach((elItem, i)=>{
             elItem.classList.remove("gold", "silver", "bronze");
 
+            const currentScore = Number(elItem.dataset.score);
             if (i > 0) {
-                const currentScore = Number(elItem.dataset.score);
-                
                 // If the score is different, update rank to the actual 1-based index position
                 if (currentScore !== previousScore) {
                     currentPlace = i + 1;
                 }
-
-                previousScore = currentScore;
             }
+            previousScore = currentScore;
 
             if (currentPlace === 1) elItem.classList.add("gold");
             if (currentPlace === 2) elItem.classList.add("silver");

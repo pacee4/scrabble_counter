@@ -415,12 +415,12 @@ export class Main extends Sprite {
 
                 s.finish_game_controller.reset();
 
+                o.playerScores.mainEl.classList.remove("leaderboard");
+
                 o.playerScores.destroyInner();
                 o.playerScores.createInner();
                 o.playerScores.show();
                 o.playerScores.shrinkToFitTexts();
-
-                o.playerScores.mainEl.classList.remove("leaderboard");
 
                 s.finish_game_text_info.visible = true;
 
@@ -429,8 +429,11 @@ export class Main extends Sprite {
 
 
             case "gameFinished": {
-                o.playerScores.show();
                 o.playerScores.mainEl.classList.add("leaderboard");
+
+                o.playerScores.show();
+                o.playerScores.shrinkToFitTexts();
+                
 
                 s.stage_replaceable.add(new SRoundedLabelButtons({
                     x: 320, y: 320, sizePreset: "1", text: "Главное меню", backgroundColor: g.COLOR_PALETTE.lightGreen,
