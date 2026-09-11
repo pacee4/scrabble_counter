@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   width="640"
+   height="360"
+   viewBox="0,0,640,360"
+   id="svg6"
+   sodipodi:docname="player list-b.svg"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs6">
+    <inkscape:path-effect
+       effect="fillet_chamfer"
+       id="path-effect11"
+       is_visible="true"
+       lpeversion="1"
+       nodesatellites_param="F,0,0,1,0,0,0,1 @ F,0,0,1,0,8.1719999,0,1 @ F,0,0,1,0,8.1719999,0,1 @ F,0,0,1,0,0,0,1"
+       radius="8.1719999"
+       unit="px"
+       method="auto"
+       mode="F"
+       chamfer_steps="1"
+       flexible="false"
+       use_knot_distance="true"
+       apply_no_radius="true"
+       apply_with_radius="true"
+       only_selected="false"
+       hide_knots="false" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview6"
+     pagecolor="#175126"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="3.2016224"
+     inkscape:cx="478.35123"
+     inkscape:cy="152.57889"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg6" />
+  <rect
+     style="fill:#000000;fill-opacity:0.25098041;stroke:none;stroke-width:0.672066;stroke-opacity:0.835294"
+     id="rect11"
+     width="243.905"
+     height="67.466003"
+     x="378.94699"
+     y="189.37399"
+     rx="8.1719999"
+     ry="8.1719999" />
+  <path
+     style="fill:#000000;fill-opacity:0.25098;stroke:none;stroke-width:0.40295;stroke-opacity:0.835294"
+     id="rect6"
+     width="52.804001"
+     height="40.307999"
+     x="529.90302"
+     y="102.729"
+     rx="0"
+     ry="0"
+     inkscape:path-effect="#path-effect11"
+     sodipodi:type="rect"
+     d="m 529.90302,102.729 h 44.632 a 8.1719999,8.1719999 45 0 1 8.172,8.172 v 23.964 a 8.1719999,8.1719999 135 0 1 -8.172,8.17199 h -44.632 z" />
+  <text
+     font-size="24px"
+     xml:space="preserve"
+     fill="#e5d497"
+     stroke="none"
+     stroke-width="1"
+     stroke-linecap="butt"
+     stroke-miterlimit="10"
+     font-family="calibrib, 'Sans Serif'"
+     font-weight="400"
+     text-anchor="start"
+     id="text1"
+     x="130.56644"
+     y="33.913559"><tspan
+       x="130.56644"
+       dy="0"
+       id="tspan1">Введите имена игроков по порядку:</tspan></text>
+  <g
+     id="g11">
+    <text
+       font-size="12px"
+       xml:space="preserve"
+       fill="#ffffff"
+       stroke="none"
+       stroke-width="1"
+       stroke-linecap="butt"
+       stroke-miterlimit="10"
+       font-family="calibri, 'Sans Serif'"
+       font-weight="400"
+       text-anchor="start"
+       id="text2"
+       x="158.57304"
+       y="75.893555"><tspan
+         x="158.57304"
+         dy="0"
+         id="tspan2">Игроки:</tspan></text>
+    <text
+       font-size="12px"
+       xml:space="preserve"
+       fill="#ffffff"
+       stroke="none"
+       stroke-width="1"
+       stroke-linecap="butt"
+       stroke-miterlimit="10"
+       font-family="calibri, 'Sans Serif'"
+       font-weight="400"
+       text-anchor="start"
+       id="text3"
+       x="451.02274"
+       y="75.893555"><tspan
+         x="451.02274"
+         dy="0"
+         id="tspan3">Таймер хода:</tspan></text>
+    <text
+       font-size="12px"
+       xml:space="preserve"
+       fill="#80ffff"
+       stroke="none"
+       stroke-width="1"
+       stroke-linecap="butt"
+       stroke-miterlimit="10"
+       font-family="calibri, 'Sans Serif'"
+       font-weight="400"
+       text-anchor="start"
+       id="text4"
+       x="201.57304"
+       y="75.893555"><tspan
+         x="201.57304"
+         dy="0"
+         id="tspan4">от 2 до 4</tspan></text>
+  </g>
+  <text
+     font-size="17.544px"
+     xml:space="preserve"
+     fill="#ffffff"
+     stroke="none"
+     stroke-width="0.4386"
+     stroke-linecap="butt"
+     stroke-miterlimit="10"
+     font-family="calibri, 'Sans Serif'"
+     font-weight="400"
+     text-anchor="start"
+     id="text5"
+     x="413.92725"
+     y="212.92986"><tspan
+       x="413.92725"
+       dy="0"
+       id="tspan5"
+       style="stroke-width:0.4386">Таймер до окончания игры</tspan></text>
+  <text
+     font-size="17.544px"
+     xml:space="preserve"
+     fill="#ffffff"
+     stroke="none"
+     stroke-width="0.4386"
+     stroke-linecap="butt"
+     stroke-miterlimit="10"
+     font-family="calibri, 'Sans Serif'"
+     font-weight="400"
+     text-anchor="start"
+     id="text6"
+     x="413.92725"
+     y="244.92984"><tspan
+       x="413.92725"
+       dy="0"
+       id="tspan6"
+       style="stroke-width:0.4386">Запустить сразу</tspan></text>
+</svg>
+<!--rotationCenter:320:180-->
+
