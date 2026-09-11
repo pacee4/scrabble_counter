@@ -517,14 +517,7 @@ export class Main extends Sprite {
                     htmlElementClass.setEvents();
                 }
 
-                // DEBUG
-                if (import.meta.env.DEV && true) {
-                    this.changeStage("mainMenu");
-                    messages.broadcast(Msg.START_GAME);
-                }
-                else {
-                    this.changeStage("mainMenu");
-                }
+                this.changeStage("mainMenu");
                 break;
 
 

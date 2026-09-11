@@ -198,7 +198,6 @@ export class SMoveInfoBoard extends Sprite {
             sub.setTextAnchor("left");
             sub.ctx.font = `12pt ${g.FONT_STACK}`;
             sub.ctx.fillStyle = "white";
-            sub.text = "20 очков"; // DEBUG
         }
         // Word status
         {
@@ -208,7 +207,6 @@ export class SMoveInfoBoard extends Sprite {
             sub.setTextAnchor("left");
             sub.ctx.font = `bold 18pt ${g.FONT_STACK}`;
             sub.ctx.fillStyle = "black";
-            sub.text = "Слово 1 из 1"; // DEBUG
         }
     }
 
@@ -404,7 +402,6 @@ export class SPlayerTurnTextInfo extends Sprite {
 
             sub.ctx.font = `bold 18pt ${g.FONT_STACK}`;
             sub.lineHeightPx = CtxToolkit.getLineHeight(this.subCurrentPlayerTurn.ctx, 1.1);
-            // DEBUG sub.text = "Эрудированный Игрок 1";
         }
 
         // Static bottom text
@@ -651,7 +648,6 @@ export class SMoveInfoTextInfo extends Sprite {
 
             sub.ctx.font = `bold 18pt ${g.FONT_STACK}`;
             sub.lineHeightPx = CtxToolkit.getLineHeight(this.subPlayerName.ctx, 1.1);
-            // DEBUG sub.text = "Эрудированный Игрок 1";
         }
 
         // Static bottom text
