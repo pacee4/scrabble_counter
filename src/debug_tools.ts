@@ -1,5 +1,6 @@
 import { els, createEl } from "./dom";
 import type { m as M } from "@/core/sensing_properties";
+import type { Msg } from "@/editable/msg";
 
 export class DebugTools {
     private divO = createEl("div", {id: "g-divO", class: "hide g-flex g-column"});
@@ -26,7 +27,7 @@ export class DebugTools {
 
     paused = false;
     logMessages = false;
-    calledMessages: string[] = [];
+    calledMessages: Msg[] = [];
 
     showBounds = false;
 
