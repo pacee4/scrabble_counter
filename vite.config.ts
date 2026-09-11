@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from "path";
 
 export default defineConfig({
-    root: "./",
+    base: "./",
     server: {
         host: "localhost",
         port: 8080,

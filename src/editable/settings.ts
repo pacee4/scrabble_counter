@@ -22,9 +22,9 @@ export function getResourcesToLoad(): ResourcesToLoad {
 
             "background": "./assets/background.svg",
             "background-help": "./assets/background-help.svg",
-            "background_particle-1": "/assets/background_particle-1.svg",
-            "background_particle-2": "/assets/background_particle-2.svg",
-            "background_particle-3": "/assets/background_particle-3.svg",
+            "background_particle-1": "./assets/background_particle-1.svg",
+            "background_particle-2": "./assets/background_particle-2.svg",
+            "background_particle-3": "./assets/background_particle-3.svg",
 
             "box-1": "./assets/elements/box-1.svg",
 
