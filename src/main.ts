@@ -17,4 +17,4 @@ if (!window.loadingError) {
 }
 
 // LOAD THE PROJECT INFORMATION
-UI.modal.fetchInfo(import.meta.env.DEV ? "./project_directory.json" : "/project/game_directory.json");
+UI.modal.fetchInfo(import.meta.env.DEV ? "./project_directory.json" : "/projects/project_directory.json");
