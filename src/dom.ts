@@ -169,10 +169,9 @@ class PageVisibilityPolyfill {
 interface CustomHistoryState {
     modalOpen: boolean
 }
-interface GameDirectoryEntry {
+/** An app name is the page title. */
+interface AppMetadata {
     name: string,
-    src: string,
-    thumb_src?: string,
     date_published: string,
     date_updated?: string,
 
@@ -182,12 +181,12 @@ interface GameDirectoryEntry {
             length?: "minigame"|"plot",
             other?: string[]
         },
-        powered_by?: "pixijs"|"turbowarp"|"none"
+        powered_by?: string,
         description?: string,
         how_to_play?: string,
         credits?: string
     }
-}
+};
 class Modal {
     readonly els = {
         modal: document.getElementById("g-modal") as HTMLDivElement,
@@ -370,15 +369,10 @@ class Modal {
         fetch(url)
         .then((response)=>{
             if (!response.ok) throw new Error(`Cannot load file: ${response.url}`);
-            return (response.json() as Promise<Array<GameDirectoryEntry>>);
+            return (response.json() as Promise<AppMetadata>);
         })
         .then((json)=>{
-            // when a JSON file has successfully loaded
-            const entry = json.find((entry)=>(entry.name.toLowerCase() === document.title.toLowerCase()))
-            if (!entry) throw new Error(`No match with the title: ${document.title}`);
-            
-            // when the info is received by the title
-            this.placeInfo(entry);
+            this.placeInfo(json);
         })
         .catch((error)=>{
             document.querySelector("#g-modalDivContent > p")!.textContent = "Не удалось загрузить информацию";
@@ -386,7 +380,8 @@ class Modal {
             console.warn(error);
         });
     }
-    private placeInfo(entry: GameDirectoryEntry) {
+    private placeInfo(entry: AppMetadata) {
+
         this.els.modalDivContent.textContent = "";
         const f = document.createDocumentFragment();
 
@@ -449,13 +444,9 @@ class Modal {
             if (dateUpdated) div.appendChild(this.createDate("Обновлено", dateUpdated));
             // powered_by
             {
-                const poweredBy = entry.details?.powered_by ?? "none";
-                if (poweredBy!=="none")
-                    div.appendChild(createEl("p", {class: "info t-blue", text: (
-                        (poweredBy==="turbowarp")
-                        ? "Создано на Scratch с использованием сторонних утилит TurboWarp и TurboWarp Packager."
-                        : "Работает на браузерном игровом движке PixiJS."
-                    )}));
+                const poweredBy = entry.details?.powered_by;
+                if (poweredBy)
+                    div.appendChild(createEl("p", {class: "info t-blue", text: poweredBy}));
             }
 
             f.appendChild(div);
